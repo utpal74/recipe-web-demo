@@ -38,6 +38,9 @@ func New(path string) (*Repository, error) {
 }
 
 func (repo *Repository) Create(ctx context.Context, recipe model.Recipe) (model.Recipe, error) {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
 	newRecipe := model.Recipe{
 		ID:           model.RecipeID(xid.New().String()),
 		Name:         recipe.Name,
@@ -57,6 +60,9 @@ func (repo *Repository) Create(ctx context.Context, recipe model.Recipe) (model.
 }
 
 func (repo *Repository) GetByID(ctx context.Context, id model.RecipeID) (model.Recipe, error) {
+	repo.mu.RLock()
+	defer repo.mu.RUnlock()
+
 	for _, recipe := range repo.data {
 		if recipe.ID == id {
 			return recipe, nil
@@ -67,12 +73,18 @@ func (repo *Repository) GetByID(ctx context.Context, id model.RecipeID) (model.R
 }
 
 func (repo *Repository) GetAll(ctx context.Context) ([]model.Recipe, error) {
+	repo.mu.RLock()
+	defer repo.mu.RUnlock()
+
 	out := make([]model.Recipe, len(repo.data))
 	copy(out, repo.data)
 	return out, nil
 }
 
 func (repo *Repository) Update(ctx context.Context, recipe model.Recipe) (model.Recipe, error) {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
 	for i, r := range repo.data {
 		select {
 		case <-ctx.Done():
@@ -84,7 +96,7 @@ func (repo *Repository) Update(ctx context.Context, recipe model.Recipe) (model.
 			updated := append([]model.Recipe(nil), repo.data...)
 			updated[i] = recipe
 
-			if err := saveAll(repo.dataPath, repo.data); err != nil {
+			if err := saveAll(repo.dataPath, updated); err != nil {
 				return model.Recipe{}, err
 			}
 
@@ -97,6 +109,9 @@ func (repo *Repository) Update(ctx context.Context, recipe model.Recipe) (model.
 }
 
 func (repo *Repository) Delete(ctx context.Context, id model.RecipeID) error {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
 	for i, r := range repo.data {
 		select {
 		case <-ctx.Done():
@@ -120,6 +135,9 @@ func (repo *Repository) Delete(ctx context.Context, id model.RecipeID) error {
 }
 
 func (repo *Repository) GetByTag(ctx context.Context, tag string) ([]model.Recipe, error) {
+	repo.mu.RLock()
+	defer repo.mu.RUnlock()
+
 	recipes := []model.Recipe{}
 	for _, r := range repo.data {
 		select {
