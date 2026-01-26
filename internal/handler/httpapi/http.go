@@ -29,8 +29,6 @@ func (handler *Handler) CreateRecipeHandler(ctx *gin.Context) {
 	result, err := handler.ctrl.CreateRecipe(ctx.Request.Context(), r)
 	if err != nil {
 		switch {
-		case errors.Is(err, recipe.ErrConflict):
-			ctx.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		case errors.Is(err, recipe.ErrInvalidInput):
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		default:
@@ -46,8 +44,6 @@ func (handler *Handler) ListRecipeHandler(ctx *gin.Context) {
 	recipes, err := handler.ctrl.ListRecipes(ctx)
 	if err != nil {
 		switch {
-		case errors.Is(err, recipe.ErrNotFound):
-			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		default:
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		}
@@ -121,6 +117,8 @@ func (handler *Handler) ListRecipesByTagHandler(ctx *gin.Context) {
 	recipes, err := handler.ctrl.GetRecipeByTag(ctx.Request.Context(), req.Tag)
 	if err != nil {
 		switch {
+		case errors.Is(err, recipe.ErrInvalidInput):
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		default:
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		}
