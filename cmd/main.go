@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/gin-demo/recipes-web/internal/controller/recipe"
 	"github.com/gin-demo/recipes-web/internal/handler/httpapi"
 	"github.com/gin-demo/recipes-web/internal/repository/memory"
@@ -23,7 +25,7 @@ func main() {
 
 	repo, err := memory.New(DATA_PATH)
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to initialize repository: %v", err)
 	}
 	ctrl := recipe.New(repo)
 	handler := httpapi.New(ctrl)
