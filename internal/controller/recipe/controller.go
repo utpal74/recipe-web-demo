@@ -7,7 +7,11 @@ import (
 	"github.com/gin-demo/recipes-web/model"
 )
 
-var ErrNotFound = errors.New("recipe not found")
+var (
+	ErrNotFound     = errors.New("recipe not found")
+	ErrInvalidInput = errors.New("invalid input")
+	ErrConflict     = errors.New("recipe conflict")
+)
 
 type recipeRepository interface {
 	Create(context.Context, model.Recipe) (model.Recipe, error)

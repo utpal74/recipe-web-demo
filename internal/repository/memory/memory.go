@@ -14,7 +14,12 @@ import (
 	"github.com/rs/xid"
 )
 
-var ErrNotFound = errors.New("recipe not found")
+var (
+	ErrNotFound      = errors.New("recipe not found")
+	ErrPersistence   = errors.New("persistence failure")
+	ErrIOFailure     = errors.New("IO failure")
+	ErrSerialization = errors.New("serialization/deserialziation failure")
+)
 
 type Repository struct {
 	mu       sync.RWMutex
@@ -25,13 +30,13 @@ type Repository struct {
 func New(path string) (*Repository, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("open recipe data: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrIOFailure, err)
 	}
 	defer file.Close()
 
 	var recipes []model.Recipe
 	if err := json.NewDecoder(file).Decode(&recipes); err != nil {
-		return nil, fmt.Errorf("error decoding recipes data %v", err)
+		return nil, fmt.Errorf("%w: %v", ErrSerialization, err)
 	}
 
 	return &Repository{data: recipes, dataPath: path}, nil
@@ -53,7 +58,7 @@ func (repo *Repository) Create(ctx context.Context, recipe model.Recipe) (model.
 	repo.data = append(repo.data, newRecipe)
 
 	if err := saveAll(repo.dataPath, repo.data); err != nil {
-		return model.Recipe{}, fmt.Errorf("error saving newly created data to DB %v", err)
+		return model.Recipe{}, fmt.Errorf("%w: %v", ErrPersistence, err)
 	}
 
 	return newRecipe, nil
@@ -97,7 +102,7 @@ func (repo *Repository) Update(ctx context.Context, recipe model.Recipe) (model.
 			updated[i] = recipe
 
 			if err := saveAll(repo.dataPath, updated); err != nil {
-				return model.Recipe{}, err
+				return model.Recipe{}, fmt.Errorf("%w: %v", ErrPersistence, err)
 			}
 
 			repo.data = updated
@@ -123,7 +128,7 @@ func (repo *Repository) Delete(ctx context.Context, id model.RecipeID) error {
 			updated := append(repo.data[0:i], repo.data[i+1:]...)
 
 			if err := saveAll(repo.dataPath, updated); err != nil {
-				return err
+				return fmt.Errorf("%w: %v", ErrPersistence, err)
 			}
 
 			repo.data = updated

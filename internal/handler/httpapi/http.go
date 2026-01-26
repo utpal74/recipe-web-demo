@@ -18,20 +18,25 @@ func New(ctrl *recipe.Controller) *Handler {
 }
 
 func (handler *Handler) CreateRecipeHandler(ctx *gin.Context) {
-	var recipe model.Recipe
-	if err := ctx.ShouldBindJSON(&recipe); err != nil {
+	var r model.Recipe
+	if err := ctx.ShouldBindJSON(&r); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"message": "error creating recipe",
-			"details": err.Error(),
+			"error": "invalid request body",
 		})
 		return
 	}
 
-	result, err := handler.ctrl.CreateRecipe(ctx.Request.Context(), recipe)
+	result, err := handler.ctrl.CreateRecipe(ctx.Request.Context(), r)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
+		switch {
+		case errors.Is(err, recipe.ErrConflict):
+			ctx.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		case errors.Is(err, recipe.ErrInvalidInput):
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		default:
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
 	}
 
 	ctx.JSON(http.StatusCreated, result)
@@ -40,10 +45,12 @@ func (handler *Handler) CreateRecipeHandler(ctx *gin.Context) {
 func (handler *Handler) ListRecipeHandler(ctx *gin.Context) {
 	recipes, err := handler.ctrl.ListRecipes(ctx)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"message": "error fetching the recipes",
-			"details": err.Error(),
-		})
+		switch {
+		case errors.Is(err, recipe.ErrNotFound):
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		default:
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		}
 		return
 	}
 
@@ -65,8 +72,7 @@ func (handler *Handler) UpdateRecipeHandler(ctx *gin.Context) {
 
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"message": "need reciept ID",
-			"details": err.Error(),
+			"error": "invalid reciept ID",
 		})
 		return
 	}
@@ -74,8 +80,7 @@ func (handler *Handler) UpdateRecipeHandler(ctx *gin.Context) {
 	var body UpdateRecipeRequest
 	if err := ctx.ShouldBindJSON(&body); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"message": "need reciept ID",
-			"details": err.Error(),
+			"error": "need reciept ID",
 		})
 		return
 	}
@@ -88,9 +93,12 @@ func (handler *Handler) UpdateRecipeHandler(ctx *gin.Context) {
 
 	updatedRecipe, err := handler.ctrl.UpdateRecipe(ctx.Request.Context(), req.ID, cmd)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
+		switch {
+		case errors.Is(err, recipe.ErrNotFound):
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		default:
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		}
 		return
 	}
 
@@ -101,22 +109,21 @@ type SearchRecipeRequest struct {
 	Tag string `form:"tag" binding:"required"`
 }
 
-func (handler *Handler) SearchRecipeHandler(ctx *gin.Context) {
+func (handler *Handler) ListRecipesByTagHandler(ctx *gin.Context) {
 	var req SearchRecipeRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"message": "tag is required",
-			"details": err.Error(),
+			"error": "tag is required",
 		})
 		return
 	}
 
 	recipes, err := handler.ctrl.GetRecipeByTag(ctx.Request.Context(), req.Tag)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"message": "error searching using tag",
-			"detail":  err.Error(),
-		})
+		switch {
+		default:
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		}
 		return
 	}
 
@@ -127,27 +134,26 @@ type SearchByIDRequest struct {
 	ID model.RecipeID `uri:"id" binding:"required"`
 }
 
-func (handler *Handler) SearchRecipeByIDHandler(ctx *gin.Context) {
+func (handler *Handler) GetRecipeByIDHandler(ctx *gin.Context) {
 	var req SearchByIDRequest
 
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"message": "invalid reciept ID",
-			"details": err.Error(),
+			"error": "invalid reciept ID",
 		})
 		return
 	}
 
-	result, err := handler.ctrl.GetRecipeByID(ctx, req.ID)
-	if errors.Is(err, recipe.ErrNotFound) {
-		ctx.JSON(http.StatusNotFound, gin.H{
-			"error": err.Error(),
-		})
-		return
-	} else if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
+	result, err := handler.ctrl.GetRecipeByID(ctx.Request.Context(), req.ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, recipe.ErrNotFound):
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case errors.Is(err, recipe.ErrInvalidInput):
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		default:
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
+		}
 		return
 	}
 
@@ -163,17 +169,18 @@ func (handler *Handler) DeleteRecipeHandler(ctx *gin.Context) {
 
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"message": "invalid reciept ID",
-			"details": err.Error(),
+			"error": "invalid reciept ID",
 		})
 		return
 	}
 
 	if err := handler.ctrl.DeleteRecipe(ctx.Request.Context(), req.ID); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"message": "error deleting the recipe",
-			"error":   err.Error(),
-		})
+		switch {
+		case errors.Is(err, recipe.ErrNotFound):
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		default:
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		}
 		return
 	}
 

@@ -29,8 +29,8 @@ func main() {
 	handler := httpapi.New(ctrl)
 
 	router.GET("/recipes", handler.ListRecipeHandler)
-	router.GET("/recipes/search", handler.SearchRecipeHandler)
-	router.GET("/recipes/:id", handler.SearchRecipeByIDHandler)
+	router.GET("/recipes/search", handler.ListRecipesByTagHandler)
+	router.GET("/recipes/:id", handler.GetRecipeByIDHandler)
 	router.POST("/recipes", handler.CreateRecipeHandler)
 	router.DELETE("/recipes/:id", handler.DeleteRecipeHandler)
 	router.PUT("/recipes/:id", handler.UpdateRecipeHandler)
