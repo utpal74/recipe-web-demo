@@ -21,12 +21,14 @@ var (
 	ErrSerialization = errors.New("serialization/deserialziation failure")
 )
 
+// Repository implements the recipe repository interface using in-memory storage with file persistence.
 type Repository struct {
 	mu       sync.RWMutex
 	data     []model.Recipe
 	dataPath string
 }
 
+// New creates a new Repository instance with data loaded from the specified file path.
 func New(path string) (*Repository, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -42,6 +44,7 @@ func New(path string) (*Repository, error) {
 	return &Repository{data: recipes, dataPath: path}, nil
 }
 
+// Create adds a new recipe to the repository.
 func (repo *Repository) Create(ctx context.Context, recipe model.Recipe) (model.Recipe, error) {
 	repo.mu.Lock()
 	defer repo.mu.Unlock()
@@ -64,6 +67,7 @@ func (repo *Repository) Create(ctx context.Context, recipe model.Recipe) (model.
 	return newRecipe, nil
 }
 
+// GetByID retrieves a recipe by its ID.
 func (repo *Repository) GetByID(ctx context.Context, id model.RecipeID) (model.Recipe, error) {
 	repo.mu.RLock()
 	defer repo.mu.RUnlock()
@@ -77,6 +81,7 @@ func (repo *Repository) GetByID(ctx context.Context, id model.RecipeID) (model.R
 	return model.Recipe{}, ErrNotFound
 }
 
+// GetAll returns all recipes in the repository.
 func (repo *Repository) GetAll(ctx context.Context) ([]model.Recipe, error) {
 	repo.mu.RLock()
 	defer repo.mu.RUnlock()
@@ -86,6 +91,7 @@ func (repo *Repository) GetAll(ctx context.Context) ([]model.Recipe, error) {
 	return out, nil
 }
 
+// Update modifies an existing recipe in the repository.
 func (repo *Repository) Update(ctx context.Context, recipe model.Recipe) (model.Recipe, error) {
 	repo.mu.Lock()
 	defer repo.mu.Unlock()
@@ -113,6 +119,7 @@ func (repo *Repository) Update(ctx context.Context, recipe model.Recipe) (model.
 	return model.Recipe{}, ErrNotFound
 }
 
+// Delete removes a recipe from the repository by ID.
 func (repo *Repository) Delete(ctx context.Context, id model.RecipeID) error {
 	repo.mu.Lock()
 	defer repo.mu.Unlock()
@@ -139,6 +146,7 @@ func (repo *Repository) Delete(ctx context.Context, id model.RecipeID) error {
 	return ErrNotFound
 }
 
+// GetByTag retrieves all recipes that contain the specified tag.
 func (repo *Repository) GetByTag(ctx context.Context, tag string) ([]model.Recipe, error) {
 	repo.mu.RLock()
 	defer repo.mu.RUnlock()
