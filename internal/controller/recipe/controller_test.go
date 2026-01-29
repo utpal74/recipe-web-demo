@@ -10,12 +10,12 @@ import (
 )
 
 type mockRepo struct {
-	recipes []model.Recipe
-	createFunc func(context.Context, model.Recipe) (model.Recipe, error)
-	getByIDFunc func(context.Context, model.RecipeID) (model.Recipe, error)
-	getAllFunc func(context.Context) ([]model.Recipe, error)
-	updateFunc func(context.Context, model.Recipe) (model.Recipe, error)
-	deleteFunc func(context.Context, model.RecipeID) error
+	recipes      []model.Recipe
+	createFunc   func(context.Context, model.Recipe) (model.Recipe, error)
+	getByIDFunc  func(context.Context, model.RecipeID) (model.Recipe, error)
+	getAllFunc   func(context.Context) ([]model.Recipe, error)
+	updateFunc   func(context.Context, model.Recipe) (model.Recipe, error)
+	deleteFunc   func(context.Context, model.RecipeID) error
 	getByTagFunc func(context.Context, string) ([]model.Recipe, error)
 }
 

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-demo/recipes-web/internal/controller/recipe"
+	"github.com/gin-demo/recipes-web/internal/domain"
 	"github.com/gin-demo/recipes-web/model"
 	"github.com/gin-gonic/gin"
 )
@@ -32,7 +33,7 @@ func (handler *Handler) CreateRecipeHandler(ctx *gin.Context) {
 	result, err := handler.ctrl.CreateRecipe(ctx.Request.Context(), r)
 	if err != nil {
 		switch {
-		case errors.Is(err, recipe.ErrInvalidInput):
+		case errors.Is(err, domain.ErrInvalidInput):
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		default:
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -66,9 +67,9 @@ type UpdateRecipeIDRequest struct {
 // UpdateRecipeRequest represents the request body for updating a recipe.
 type UpdateRecipeRequest struct {
 	// Name is the optional new name for the recipe
-	Name        *string  `json:"name"`
+	Name *string `json:"name"`
 	// Tags is the optional new list of tags for the recipe
-	Tags        []string `json:"tags"`
+	Tags []string `json:"tags"`
 	// Ingredients is the optional new list of ingredients for the recipe
 	Ingredients []string `json:"ingredients"`
 }
@@ -101,7 +102,7 @@ func (handler *Handler) UpdateRecipeHandler(ctx *gin.Context) {
 	updatedRecipe, err := handler.ctrl.UpdateRecipe(ctx.Request.Context(), req.ID, cmd)
 	if err != nil {
 		switch {
-		case errors.Is(err, recipe.ErrNotFound):
+		case errors.Is(err, domain.ErrNotFound):
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		default:
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
@@ -131,8 +132,10 @@ func (handler *Handler) ListRecipesByTagHandler(ctx *gin.Context) {
 	recipes, err := handler.ctrl.GetRecipeByTag(ctx.Request.Context(), req.Tag)
 	if err != nil {
 		switch {
-		case errors.Is(err, recipe.ErrInvalidInput):
+		case errors.Is(err, domain.ErrInvalidInput):
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case errors.Is(err, domain.ErrNotFound):
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		default:
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		}
@@ -162,12 +165,12 @@ func (handler *Handler) GetRecipeByIDHandler(ctx *gin.Context) {
 	result, err := handler.ctrl.GetRecipeByID(ctx.Request.Context(), req.ID)
 	if err != nil {
 		switch {
-		case errors.Is(err, recipe.ErrNotFound):
+		case errors.Is(err, domain.ErrNotFound):
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		case errors.Is(err, recipe.ErrInvalidInput):
+		case errors.Is(err, domain.ErrInvalidInput):
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		default:
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		}
 		return
 	}
@@ -194,7 +197,7 @@ func (handler *Handler) DeleteRecipeHandler(ctx *gin.Context) {
 
 	if err := handler.ctrl.DeleteRecipe(ctx.Request.Context(), req.ID); err != nil {
 		switch {
-		case errors.Is(err, recipe.ErrNotFound):
+		case errors.Is(err, domain.ErrNotFound):
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		default:
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
