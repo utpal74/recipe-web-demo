@@ -12,19 +12,17 @@ import (
 	"time"
 
 	"github.com/gin-demo/recipes-web/internal/bootstrap"
+	"github.com/gin-demo/recipes-web/internal/cache/redisrecipe"
 	"github.com/gin-demo/recipes-web/internal/controller/recipe"
+	"github.com/gin-demo/recipes-web/internal/domain"
 	"github.com/gin-demo/recipes-web/internal/handler/httpapi"
+	"github.com/gin-demo/recipes-web/internal/repository"
 	"github.com/gin-demo/recipes-web/internal/repository/memory"
 	"github.com/gin-demo/recipes-web/internal/repository/mongorepo"
 	"github.com/gin-gonic/gin"
 )
 
-var (
-	repo      recipe.RecipeRepository
-	mongoRepo *mongorepo.Repository
-	err       error
-)
-
+// Config holds the application configuration from environment variables.
 type Config struct {
 	RepoType string
 	DataPath string
@@ -33,15 +31,22 @@ type Config struct {
 	SeedData bool
 }
 
+// main initializes and runs the recipe application server.
 func main() {
 	/*
-		GET /recipes - Return list of recipes
-		GET /recipes/{id} - Get recipe by ID
-		POST /recipes - Create new recipe
-		PUT /recipes/{id} - Updates an existing recipes
-		DELETE /recipes/{id} - Deletes an existing recipes
-		GET /recipes/search?tag=X = Search recipe by tag
+	GET /recipes - Return list of recipes
+	GET /recipes/{id} - Get recipe by ID
+	POST /recipes - Create new recipe
+	PUT /recipes/{id} - Updates an existing recipes
+	DELETE /recipes/{id} - Deletes an existing recipes
+	GET /recipes/search?tag=X = Search recipe by tag
 	*/
+	
+	var (
+		repo      domain.RecipeRepository
+		mongoRepo *mongorepo.Repository
+		err       error
+	)
 
 	cfg := loadConfig()
 
@@ -71,6 +76,17 @@ func main() {
 
 	if err != nil {
 		log.Fatalf("failed to initialize repository: %v", err)
+	}
+
+	redisClient, err := bootstrap.NewRedis("localhost:6379", "", 0)
+	if err != nil {
+		log.Printf("redis client init error : %v\n", err)
+	}
+
+	if redisClient != nil {
+		cache := redisrecipe.NewCache(redisClient, 30*time.Minute)
+		cachedRepo := repository.NewCachedRepository(repo, cache)
+		repo = cachedRepo
 	}
 
 	router := gin.Default()
@@ -120,6 +136,7 @@ func main() {
 	log.Println("Server exiting")
 }
 
+// loadConfig reads configuration from environment variables with defaults.
 func loadConfig() Config {
 	// default configuration
 	cfg := Config{

@@ -7,22 +7,13 @@ import (
 	"github.com/gin-demo/recipes-web/model"
 )
 
-type RecipeRepository interface {
-	Create(context.Context, model.Recipe) (model.Recipe, error)
-	GetByID(context.Context, model.RecipeID) (model.Recipe, error)
-	GetAll(context.Context) ([]model.Recipe, error)
-	Update(context.Context, model.Recipe) (model.Recipe, error)
-	Delete(context.Context, model.RecipeID) error
-	GetByTag(context.Context, string) ([]model.Recipe, error)
-}
-
 // Controller handles business logic for recipe operations.
 type Controller struct {
-	repo RecipeRepository
+	repo domain.RecipeRepository
 }
 
 // New creates a new Controller with the given repository.
-func New(repo RecipeRepository) *Controller {
+func New(repo domain.RecipeRepository) *Controller {
 	return &Controller{repo}
 }
 
