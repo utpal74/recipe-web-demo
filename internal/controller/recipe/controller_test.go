@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/gin-demo/recipes-web/internal/domain"
 	"github.com/gin-demo/recipes-web/internal/repository/memory"
 	"github.com/gin-demo/recipes-web/model"
 )
@@ -114,17 +115,18 @@ func TestControllerGetRecipeByID(t *testing.T) {
 
 	// Not found
 	_, err = ctrl.GetRecipeByID(context.Background(), "nonexistent")
-	if err != ErrNotFound {
-		t.Error("Expected ErrNotFound")
+	if err != memory.ErrNotFound {
+		t.Errorf("Expected ErrNotFound, got %v", err)
 	}
 
 	// Persistence error
+	persistenceErr := errors.New("persistence error")
 	repo.getByIDFunc = func(ctx context.Context, id model.RecipeID) (model.Recipe, error) {
-		return model.Recipe{}, errors.New("persistence error")
+		return model.Recipe{}, persistenceErr
 	}
 	_, err = ctrl.GetRecipeByID(context.Background(), "1")
-	if err == nil || !errors.Is(err, ErrPersistence) {
-		t.Error("Expected ErrPersistence")
+	if err != persistenceErr {
+		t.Errorf("Expected persistence error, got %v", err)
 	}
 }
 
@@ -143,12 +145,13 @@ func TestControllerListRecipes(t *testing.T) {
 	}
 
 	// Error case
+	allErr := errors.New("error")
 	repo.getAllFunc = func(ctx context.Context) ([]model.Recipe, error) {
-		return nil, errors.New("error")
+		return nil, allErr
 	}
 	_, err = ctrl.ListRecipes(context.Background())
-	if err != ErrPersistence {
-		t.Error("Expected ErrPersistence")
+	if err != allErr {
+		t.Errorf("Expected error, got %v", err)
 	}
 }
 
@@ -171,17 +174,18 @@ func TestControllerUpdateRecipe(t *testing.T) {
 
 	// Not found
 	_, err = ctrl.UpdateRecipe(context.Background(), "nonexistent", cmd)
-	if err != ErrNotFound {
-		t.Error("Expected ErrNotFound")
+	if err != memory.ErrNotFound {
+		t.Errorf("Expected ErrNotFound, got %v", err)
 	}
 
 	// Persistence error on get
+	getErr := errors.New("get error")
 	repo.getByIDFunc = func(ctx context.Context, id model.RecipeID) (model.Recipe, error) {
-		return model.Recipe{}, errors.New("get error")
+		return model.Recipe{}, getErr
 	}
 	_, err = ctrl.UpdateRecipe(context.Background(), "1", cmd)
-	if err == nil || !errors.Is(err, ErrPersistence) {
-		t.Error("Expected ErrPersistence")
+	if err != getErr {
+		t.Errorf("Expected get error, got %v", err)
 	}
 }
 
@@ -196,20 +200,21 @@ func TestControllerDeleteRecipe(t *testing.T) {
 
 	// Not found
 	repo.deleteFunc = func(ctx context.Context, id model.RecipeID) error {
-		return memory.ErrNotFound
+		return domain.ErrNotFound
 	}
 	err = ctrl.DeleteRecipe(context.Background(), "1")
-	if err != ErrNotFound {
-		t.Error("Expected ErrNotFound")
+	if err != domain.ErrNotFound {
+		t.Errorf("Expected ErrNotFound, got %v", err)
 	}
 
 	// Persistence error
+	delErr := errors.New("persistence")
 	repo.deleteFunc = func(ctx context.Context, id model.RecipeID) error {
-		return errors.New("persistence")
+		return delErr
 	}
 	err = ctrl.DeleteRecipe(context.Background(), "1")
-	if err != ErrPersistence {
-		t.Error("Expected ErrPersistence")
+	if err != delErr {
+		t.Errorf("Expected delete error, got %v", err)
 	}
 }
 
@@ -232,7 +237,7 @@ func TestControllerGetRecipeByTag(t *testing.T) {
 
 	// Empty tag
 	_, err = ctrl.GetRecipeByTag(context.Background(), "")
-	if err != ErrInvalidInput {
+	if err != domain.ErrInvalidInput {
 		t.Error("Expected ErrInvalidInput")
 	}
 }

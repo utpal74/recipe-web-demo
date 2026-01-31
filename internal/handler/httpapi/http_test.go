@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/gin-demo/recipes-web/internal/controller/recipe"
+	"github.com/gin-demo/recipes-web/internal/domain"
 	"github.com/gin-demo/recipes-web/internal/repository/memory"
 	"github.com/gin-demo/recipes-web/model"
 	"github.com/gin-gonic/gin"
@@ -175,7 +176,7 @@ func TestUpdateRecipeHandler(t *testing.T) {
 
 	// Not found
 	repo.updateFunc = func(ctx context.Context, r model.Recipe) (model.Recipe, error) {
-		return model.Recipe{}, recipe.ErrNotFound
+		return model.Recipe{}, domain.ErrNotFound
 	}
 	req3, _ := http.NewRequest("PUT", "/recipes/1", bytes.NewBuffer(body))
 	w3 := httptest.NewRecorder()
@@ -187,7 +188,7 @@ func TestUpdateRecipeHandler(t *testing.T) {
 
 	// Persistence error
 	repo.updateFunc = func(ctx context.Context, r model.Recipe) (model.Recipe, error) {
-		return model.Recipe{}, recipe.ErrPersistence
+		return model.Recipe{}, domain.ErrPersistence
 	}
 	req4, _ := http.NewRequest("PUT", "/recipes/1", bytes.NewBuffer(body))
 	w4 := httptest.NewRecorder()
@@ -228,7 +229,7 @@ func TestListRecipesByTagHandler(t *testing.T) {
 
 	// Invalid input
 	repo.getByTagFunc = func(ctx context.Context, tag string) ([]model.Recipe, error) {
-		return nil, recipe.ErrInvalidInput
+		return nil, domain.ErrInvalidInput
 	}
 	req3, _ := http.NewRequest("GET", "/recipes/search?tag=empty", nil)
 	w3 := httptest.NewRecorder()
@@ -258,9 +259,9 @@ func TestGetRecipeByIDHandler(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	// Not found - but controller converts it to ErrNotFound
+	// Not found
 	repo.getByIDFunc = func(ctx context.Context, id model.RecipeID) (model.Recipe, error) {
-		return model.Recipe{}, memory.ErrNotFound
+		return model.Recipe{}, domain.ErrNotFound
 	}
 	req2, _ := http.NewRequest("GET", "/recipes/nonexistent", nil)
 	w2 := httptest.NewRecorder()
@@ -272,7 +273,7 @@ func TestGetRecipeByIDHandler(t *testing.T) {
 
 	// Persistence error
 	repo.getByIDFunc = func(ctx context.Context, id model.RecipeID) (model.Recipe, error) {
-		return model.Recipe{}, memory.ErrPersistence
+		return model.Recipe{}, errors.New("database error")
 	}
 	req3, _ := http.NewRequest("GET", "/recipes/1", nil)
 	w3 := httptest.NewRecorder()
@@ -304,7 +305,7 @@ func TestDeleteRecipeHandler(t *testing.T) {
 
 	// Not found
 	repo.deleteFunc = func(ctx context.Context, id model.RecipeID) error {
-		return memory.ErrNotFound
+		return domain.ErrNotFound
 	}
 	req2, _ := http.NewRequest("DELETE", "/recipes/nonexistent", nil)
 	w2 := httptest.NewRecorder()
@@ -316,7 +317,7 @@ func TestDeleteRecipeHandler(t *testing.T) {
 
 	// Persistence error
 	repo.deleteFunc = func(ctx context.Context, id model.RecipeID) error {
-		return memory.ErrPersistence
+		return errors.New("database error")
 	}
 	req3, _ := http.NewRequest("DELETE", "/recipes/1", nil)
 	w3 := httptest.NewRecorder()

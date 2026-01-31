@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gin-demo/recipes-web/internal/domain"
 	"github.com/gin-demo/recipes-web/model"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
@@ -111,7 +112,7 @@ func TestRepositoryGetByID(t *testing.T) {
 
 	// Test not found
 	_, err = repo.GetByID(ctx, "nonexistent")
-	if !errors.Is(err, ErrNotFound) {
+	if !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("Expected ErrNotFound, got %v", err)
 	}
 }
@@ -182,13 +183,13 @@ func TestRepositoryDelete(t *testing.T) {
 
 	// Check deleted
 	_, err = repo.GetByID(ctx, created.ID)
-	if err != ErrNotFound {
+	if err != domain.ErrNotFound {
 		t.Errorf("Expected ErrNotFound after delete, got %v", err)
 	}
 
 	// Test delete nonexistent
 	err = repo.Delete(ctx, "nonexistent")
-	if !errors.Is(err, ErrNotFound) {
+	if !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("Expected ErrNotFound for nonexistent, got %v", err)
 	}
 }
