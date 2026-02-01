@@ -1,10 +1,4 @@
-# Gin Demo Projects
-
-A collection of Go applications demonstrating the use of the Gin web framework for building REST APIs.
-
-## Projects
-
-### Recipes Web API (`recipes-web/`)
+# Recipes Web API
 
 A REST API for managing recipes with CRUD operations, featuring Redis caching and multiple storage backends.
 
@@ -25,235 +19,20 @@ The application implements a **CachedRepository pattern** that wraps any reposit
 - **Cache Misses**: Requests fall through to the underlying repository and are cached for future use
 - **Cache Invalidation**: Updates and deletes automatically invalidate relevant cache entries
 - **TTL**: Cached entries expire after 30 minutes
-- **Graceful Degradation**: If Redis is unavailable, the application continues working with the underlying repository
+- **Graceful Degradation**: # Recipes Web API - Complete Documentation
 
-**Benefits:**
-
-- Significantly faster response times for frequently accessed recipes
-- Reduced load on the underlying repository
-- No database queries for repeated requests
-
-#### API Endpoints
-
-- `GET /recipes` - List all recipes
-- `GET /recipes/{id}` - Get recipe by ID (cached)
-- `POST /recipes` - Create a new recipe
-- `PUT /recipes/{id}` - Update an existing recipe
-- `DELETE /recipes/{id}` - Delete a recipe
-- `GET /recipes/search?tag=X` - Search recipes by tag
-
-#### Running the Application
-
-##### Option 1: PowerShell Script (Windows)
-
-```powershell
-.\run.ps1
-```
-
-The script will prompt you for:
-
-- `REPO_TYPE`: Repository backend (memory or mongo)
-- `SEED_DATA`: Whether to seed the database (true/false)
-
-##### Option 2: Shell Script (Linux, macOS, Windows with Git Bash/WSL)
-
-```bash
-chmod +x run.sh
-./run.sh
-```
-
-The script will prompt you for:
-
-- `REPO_TYPE`: Repository backend (memory or mongo)
-- `SEED_DATA`: Whether to seed the database (true/false)
-
-##### Option 3: Direct Command
-
-```bash
-# Using in-memory repository
-REPO_TYPE=memory SEED_DATA=false go run ./cmd/main.go
-
-# Using MongoDB
-REPO_TYPE=mongo SEED_DATA=true go run ./cmd/main.go
-```
-
-##### Option 4: Using Make (Linux, macOS, Windows with Make installed)
-
-```bash
-make run              # Interactive mode
-make run-memory       # In-memory backend
-make run-mongo        # MongoDB backend
-```
-
-#### Environment Variables
-
-- `REPO_TYPE` - Repository type: `memory` (default) or `mongo`
-- `SEED_DATA` - Seed database with initial data: `true` or `false` (default: false)
-- `DATA_PATH` - Path to recipe data file (default: `data/recipe.json`)
-- `MONGO_URI` - MongoDB connection URI (default: `mongodb://admin:password@localhost:27017/test?authSource=admin`)
-- `HTTP_ADDR` - Server address (default: `:8080`)
-
-The server will start on the configured HTTP address (usually http://localhost:8080).
-
-#### Dependencies for Caching
-
-- **Redis**: Required for caching functionality
-  - Default connection: `localhost:6379`
-  - If Redis is unavailable, the application continues without caching
-
-**Quick Start with Docker:**
-
-```bash
-docker run -d -p 6379:6379 redis:latest
-```
-
-### Tasks API (`tasks/`)
-
-A simple task management API with basic CRUD operations and additional features like login simulation and file uploads.
-
-#### Features
-
-- Task CRUD operations
-- Task listing with status filtering and pagination
-- Simulated login endpoint
-- File upload handling
-
-#### API Endpoints
-
-- `GET /tasks` - List tasks with optional status and page filters
-- `GET /tasks/{id}` - Get task by ID
-- `POST /tasks` - Create a new task
-- `POST /login` - Simulated login
-- `POST /tasks/{id}/attachment` - Upload attachment for a task
-
-#### Running the Application
-
-```bash
-cd tasks
-go run main.go
-```
-
-### Demo (`demo/`)
-
-Basic Gin examples demonstrating form binding, URI parameters, and JSON handling.
-
-#### Running the Demo
-
-```bash
-cd demo
-go run main.go
-```
-
-## Architecture
-
-The projects follow clean architecture principles:
-
-- **Handlers**: HTTP request/response handling
-- **Controllers**: Business logic
-- **Repositories**: Data access layer (with optional caching)
-- **Cache**: Redis-based caching layer for improved performance
-- **Models**: Data structures
-
-## Dependencies
-
-- [Gin](https://github.com/gin-gonic/gin) - HTTP web framework
-- [rs/xid](https://github.com/rs/xid) - Globally unique identifier generation
-- [MongoDB Go Driver](https://github.com/mongodb/mongo-go-driver) - MongoDB client
-- [Redis Go Client](https://github.com/redis/go-redis) - Redis client
-
-## Testing
-
-The recipes-web project includes comprehensive unit tests with high coverage:
-
-```bash
-cd recipes-web
-
-# Run all tests
-go test ./...
-
-# Run with coverage
-go test ./... -cover
-
-# Run specific test suites
-make test-cache       # Redis cache tests (81.2% coverage)
-make test-repo        # Repository tests (90.9% coverage)
-```
-
-See `TESTING_GUIDE.md` and `TEST_SUMMARY.md` for more details on testing.
-
-## Development
-
-This workspace contains multiple Go modules and applications. Each subdirectory may have its own dependencies and can be developed independently.
-
-## Platform-Specific Scripts
-
-### Windows
-
-Use the PowerShell script:
-
-```powershell
-.\run.ps1
-```
-
-### Linux / macOS / Windows (Git Bash / WSL)
-
-Use the shell script:
-
-```bash
-./run.sh
-```
-
-Alternatively, use Make:
-
-```bash
-make run
-make run-memory
-make run-mongo
-```
-
-### All Platforms
-
-Direct environment variable approach (works everywhere):
-
-```bash
-REPO_TYPE=memory SEED_DATA=false go run ./cmd/main.go
-```
-
-# Gin Demo Projects - Complete Documentation
-
-A collection of Go applications demonstrating the use of the Gin web framework for building REST APIs.
+A REST API for managing recipes with CRUD operations, featuring Redis caching and multiple storage backends.
 
 ## Table of Contents
 
-1. [Projects Overview](#projects-overview)
-2. [Recipes Web API](#recipes-web-api)
-   - [Features & Architecture](#features--architecture)
-   - [Quick Start](#quick-start)
-   - [Running the Application](#running-the-application)
-   - [API Endpoints](#api-endpoints)
-   - [Configuration](#configuration)
-3. [Testing & Coverage](#testing--coverage)
-4. [Other Projects](#other-projects)
-5. [Development Guide](#development-guide)
-6. [Troubleshooting](#troubleshooting)
-
----
-
-# Projects Overview
-
-This workspace contains multiple independent Go projects using the Gin web framework:
-
-| Project             | Purpose                        | Status              |
-| ------------------- | ------------------------------ | ------------------- |
-| **Recipes Web API** | Recipe management with caching | ✅ Production Ready |
-| **Tasks API**       | Task management system         | ✅ Complete         |
-| **Demo**            | Gin framework examples         | ✅ Reference        |
-
----
-
-# Recipes Web API
-
-A REST API for managing recipes with CRUD operations, featuring Redis caching and multiple storage backends.
+1. [Features & Architecture](#features--architecture)
+2. [Quick Start](#quick-start)
+3. [Running the Application](#running-the-application)
+4. [API Endpoints](#api-endpoints)
+5. [Configuration](#configuration)
+6. [Testing & Coverage](#testing--coverage)
+7. [Development Guide](#development-guide)
+8. [Troubleshooting](#troubleshooting)
 
 ## Features & Architecture
 
@@ -638,53 +417,6 @@ ok      github.com/gin-demo/recipes-web/internal/cache/redisrecipe   5.576s
 
 ---
 
-# Other Projects
-
-## Tasks API (`tasks/`)
-
-A simple task management API with CRUD operations and additional features.
-
-**Features:**
-
-- Task CRUD operations
-- Status filtering and pagination
-- Simulated login endpoint
-- File upload handling
-
-**API Endpoints:**
-
-- `GET /tasks` - List tasks with optional filters
-- `GET /tasks/{id}` - Get task by ID
-- `POST /tasks` - Create a new task
-- `POST /login` - Simulated login
-- `POST /tasks/{id}/attachment` - Upload attachment
-
-**Running:**
-
-```bash
-cd tasks
-go run main.go
-```
-
-## Demo (`demo/`)
-
-Basic Gin examples demonstrating framework features.
-
-**Demonstrates:**
-
-- Form binding
-- URI parameters
-- JSON handling
-
-**Running:**
-
-```bash
-cd demo
-go run main.go
-```
-
----
-
 # Development Guide
 
 ## Architecture Layers
@@ -966,5 +698,4 @@ This project is provided as-is for educational and demonstration purposes.
 **Last Updated:** January 30, 2026  
 **Status:** ✅ Ready for Production (with proper Redis/MongoDB setup)  
 **Test Coverage:** 81-91% across caching layers  
-**Platforms Supported:** Windows (PowerShell), Linux, macOS, WSL</content>
-<parameter name="filePath">d:\Golang workspace\rest-world\gin-demo\README.md
+**Platforms Supported:** Windows (PowerShell), Linux, macOS, WSL
