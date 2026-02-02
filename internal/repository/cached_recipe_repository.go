@@ -10,7 +10,7 @@ import (
 
 // CachedRepository wraps a recipe repository with Redis caching layer.
 type CachedRepository struct {
-	repo domain.RecipeRepository
+	repo  domain.RecipeRepository
 	cache *redisrecipe.Cache
 }
 
@@ -72,4 +72,3 @@ func (c *CachedRepository) GetAll(ctx context.Context) ([]model.Recipe, error) {
 func (c *CachedRepository) GetByTag(ctx context.Context, tag string) ([]model.Recipe, error) {
 	return c.repo.GetByTag(ctx, tag)
 }
-

@@ -118,7 +118,6 @@ func (m *mockRepository) GetByTag(ctx context.Context, tag string) ([]model.Reci
 	return m.recipes, nil
 }
 
-
 func TestNewCachedRepository(t *testing.T) {
 	mockRepo := newMockRepository()
 	client, cache := setupRedisForCachedRepo(t)

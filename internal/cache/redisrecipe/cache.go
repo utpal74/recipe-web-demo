@@ -13,19 +13,19 @@ import (
 // Cache manages Redis-based caching for recipes.
 type Cache struct {
 	client *redis.Client
-	ttl time.Duration
+	ttl    time.Duration
 }
 
 // NewCache creates a new Cache instance with the given Redis client and TTL.
 func NewCache(client *redis.Client, ttl time.Duration) *Cache {
 	return &Cache{
 		client: client,
-		ttl: ttl,
+		ttl:    ttl,
 	}
 }
 
 func recipeKey(id model.RecipeID) string {
-	return fmt.Sprintf("Recipe:%s",id)
+	return fmt.Sprintf("Recipe:%s", id)
 }
 
 func (c *Cache) GetByID(ctx context.Context, id model.RecipeID) (model.Recipe, bool, error) {

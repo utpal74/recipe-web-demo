@@ -16,10 +16,13 @@ import (
 	"github.com/gin-demo/recipes-web/internal/controller/recipe"
 	"github.com/gin-demo/recipes-web/internal/domain"
 	"github.com/gin-demo/recipes-web/internal/handler/httpapi"
+	"github.com/gin-demo/recipes-web/internal/handler/httpapi/auth"
+	"github.com/gin-demo/recipes-web/internal/handler/httpapi/middleware"
 	"github.com/gin-demo/recipes-web/internal/repository"
 	"github.com/gin-demo/recipes-web/internal/repository/memory"
 	"github.com/gin-demo/recipes-web/internal/repository/mongorepo"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 // Config holds the application configuration from environment variables.
@@ -34,19 +37,23 @@ type Config struct {
 // main initializes and runs the recipe application server.
 func main() {
 	/*
-	GET /recipes - Return list of recipes
-	GET /recipes/{id} - Get recipe by ID
-	POST /recipes - Create new recipe
-	PUT /recipes/{id} - Updates an existing recipes
-	DELETE /recipes/{id} - Deletes an existing recipes
-	GET /recipes/search?tag=X = Search recipe by tag
+		GET /recipes - Return list of recipes
+		GET /recipes/{id} - Get recipe by ID
+		POST /recipes - Create new recipe
+		PUT /recipes/{id} - Updates an existing recipes
+		DELETE /recipes/{id} - Deletes an existing recipes
+		GET /recipes/search?tag=X = Search recipe by tag
 	*/
-	
+
 	var (
 		repo      domain.RecipeRepository
 		mongoRepo *mongorepo.Repository
 		err       error
 	)
+
+	if err := godotenv.Load(); err != nil {
+		log.Println("no .env file found here, using system environment variable")
+	}
 
 	cfg := loadConfig()
 
@@ -78,7 +85,7 @@ func main() {
 		log.Fatalf("failed to initialize repository: %v", err)
 	}
 
-	redisClient, err := bootstrap.NewRedis("localhost:6379", "", 0)
+	redisClient, err := bootstrap.NewRedis(os.Getenv("REDIS_ADDR"), "", 0)
 	if err != nil {
 		log.Printf("redis client init error : %v\n", err)
 	}
@@ -94,12 +101,28 @@ func main() {
 	ctrl := recipe.New(repo)
 	handler := httpapi.New(ctrl)
 
+	if os.Getenv("JWT_SECRET") == "" {
+		log.Fatal("JWT_SECRET is required but not set")
+	}
+
+	authHandler := auth.New(auth.Config{
+		Secret: os.Getenv("JWT_SECRET"),
+		Issuer: "recipe-app",
+	})
+
+	router.POST("/signin", authHandler.SignInHandler)
+
 	router.GET("/recipes", handler.ListRecipeHandler)
 	router.GET("/recipes/search", handler.ListRecipesByTagHandler)
-	router.GET("/recipes/:id", handler.GetRecipeByIDHandler)
-	router.POST("/recipes", handler.CreateRecipeHandler)
-	router.DELETE("/recipes/:id", handler.DeleteRecipeHandler)
-	router.PUT("/recipes/:id", handler.UpdateRecipeHandler)
+
+	authorized := router.Group("/recipes")
+	authorized.Use(middleware.AuthMiddleware())
+	{
+		authorized.GET("/:id", handler.GetRecipeByIDHandler)
+		authorized.POST("/", handler.CreateRecipeHandler)
+		authorized.DELETE("/:id", handler.DeleteRecipeHandler)
+		authorized.PUT("/:id", handler.UpdateRecipeHandler)
+	}
 
 	srv := &http.Server{
 		Addr:    cfg.HttpAddr,
@@ -139,11 +162,16 @@ func main() {
 // loadConfig reads configuration from environment variables with defaults.
 func loadConfig() Config {
 	// default configuration
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	cfg := Config{
 		RepoType: "memory",
 		DataPath: "data/recipe.json",
-		MongoURI: "mongodb://admin:password@localhost:27017/test?authSource=admin",
-		HttpAddr: ":8080",
+		MongoURI: os.Getenv("MONGO_URI"),
+		HttpAddr: ":" + port,
 	}
 
 	if v := os.Getenv("REPO_TYPE"); v != "" {
