@@ -96,6 +96,8 @@ Choose your preferred platform:
 
 ### Linux / macOS / Git Bash / WSL
 
+This project includes basic authentication and user management, implemented in the `internal/auth` and `internal/user` packages.
+
 ```bash
 chmod +x run.sh
 ./run.sh
