@@ -11,16 +11,22 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-demo/recipes-web/internal/bootstrap"
-	"github.com/gin-demo/recipes-web/internal/cache/redisrecipe"
-	"github.com/gin-demo/recipes-web/internal/controller/recipe"
-	"github.com/gin-demo/recipes-web/internal/domain"
-	"github.com/gin-demo/recipes-web/internal/handler/httpapi"
-	"github.com/gin-demo/recipes-web/internal/handler/httpapi/auth"
-	"github.com/gin-demo/recipes-web/internal/handler/httpapi/middleware"
-	"github.com/gin-demo/recipes-web/internal/repository"
-	"github.com/gin-demo/recipes-web/internal/repository/memory"
-	"github.com/gin-demo/recipes-web/internal/repository/mongorepo"
+	authhandler "github.com/gin-demo/recipes-web/internal/auth/handler/httpapi"
+	"github.com/gin-demo/recipes-web/internal/auth/service"
+	recipedomain "github.com/gin-demo/recipes-web/internal/recipe/domain"
+	"github.com/gin-demo/recipes-web/internal/recipe/handler/httpapi"
+	"github.com/gin-demo/recipes-web/internal/recipe/repository"
+	"github.com/gin-demo/recipes-web/internal/recipe/repository/memory"
+	recipemongo "github.com/gin-demo/recipes-web/internal/recipe/repository/mongo"
+	recipeservice "github.com/gin-demo/recipes-web/internal/recipe/service"
+	"github.com/gin-demo/recipes-web/internal/shared/bootstrap"
+	"github.com/gin-demo/recipes-web/internal/shared/cache/redisrecipe"
+	"github.com/gin-demo/recipes-web/internal/shared/id"
+	"github.com/gin-demo/recipes-web/internal/shared/middleware"
+	userdomain "github.com/gin-demo/recipes-web/internal/user/domain"
+	userhandler "github.com/gin-demo/recipes-web/internal/user/handler/httpapi"
+	"github.com/gin-demo/recipes-web/internal/user/repository/usermongo"
+	userservice "github.com/gin-demo/recipes-web/internal/user/service"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -46,11 +52,12 @@ func main() {
 	*/
 
 	var (
-		repo      domain.RecipeRepository
-		mongoRepo *mongorepo.Repository
-		err       error
+		recipeRepo recipedomain.RecipeRepository
+		userRepo   userdomain.UserRepository
+		err        error
 	)
 
+	idGenerator := &id.ULIDGenerator{}
 	if err := godotenv.Load(); err != nil {
 		log.Println("no .env file found here, using system environment variable")
 	}
@@ -59,23 +66,31 @@ func main() {
 
 	switch cfg.RepoType {
 	case "memory":
-		repo, err = memory.New(cfg.DataPath)
+		recipeRepo, err = memory.New(cfg.DataPath)
 	case "mongo":
-		mongoRepo, err := mongorepo.New(cfg.MongoURI, "recipes")
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		mongoResource, err := bootstrap.InitMongo(cfg.MongoURI, "recipe-app")
 		if err != nil {
 			log.Fatalf("failed to initialize mongo repository: %v", err)
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
+		defer mongoResource.Client.Disconnect(ctx)
+
+		recipeRepo = recipemongo.New(mongoResource.Database.Collection("recipes"))
+		r := usermongo.New(mongoResource.Database.Collection("users"))
+		if err := r.EnsureIndexes(ctx); err != nil {
+			log.Fatalf("error applying index: %v", err)
+		}
+
+		userRepo = r
 
 		if cfg.SeedData {
-			if err := bootstrap.SeedRecipe(ctx, mongoRepo, cfg.DataPath); err != nil {
+			if err := bootstrap.SeedRecipe(ctx, recipeRepo, mongoResource.Database.Collection("recipes"), cfg.DataPath); err != nil {
 				log.Fatal(err)
 			}
 		}
-
-		repo = mongoRepo
 
 	default:
 		log.Fatalf("unknown REPO_TYPE: %s", cfg.RepoType)
@@ -92,36 +107,66 @@ func main() {
 
 	if redisClient != nil {
 		cache := redisrecipe.NewCache(redisClient, 30*time.Minute)
-		cachedRepo := repository.NewCachedRepository(repo, cache)
-		repo = cachedRepo
+		cachedRepo := repository.NewCachedRepository(recipeRepo, cache)
+		recipeRepo = cachedRepo
 	}
 
 	router := gin.Default()
 
-	ctrl := recipe.New(repo)
-	handler := httpapi.New(ctrl)
+	recipeService := recipeservice.NewRecipeService(recipeRepo, idGenerator)
+	handler := httpapi.New(recipeService)
 
 	if os.Getenv("JWT_SECRET") == "" {
 		log.Fatal("JWT_SECRET is required but not set")
 	}
 
-	authHandler := auth.New(auth.Config{
+	tokenService := service.NewJwtTokenService(service.Config{
 		Secret: os.Getenv("JWT_SECRET"),
 		Issuer: "recipe-app",
 	})
 
-	router.POST("/signin", authHandler.SignInHandler)
+	jwtMiddleware := middleware.NewAuthMiddleWare(tokenService)
 
-	router.GET("/recipes", handler.ListRecipeHandler)
-	router.GET("/recipes/search", handler.ListRecipesByTagHandler)
+	pwdHasher := service.New()
 
-	authorized := router.Group("/recipes")
-	authorized.Use(middleware.AuthMiddleware())
+	userService := userservice.NewUserService(userRepo, pwdHasher, idGenerator)
+
+	authService := service.NewAuthService(userService, tokenService, pwdHasher)
+	authHandler := authhandler.New(authService)
+
+	userHandler := userhandler.New(userService)
+
+	api := router.Group("/")
+
+	// ----- Public Endpoint -------
+	auth := api.Group("/auth")
 	{
-		authorized.GET("/:id", handler.GetRecipeByIDHandler)
-		authorized.POST("/", handler.CreateRecipeHandler)
-		authorized.DELETE("/:id", handler.DeleteRecipeHandler)
-		authorized.PUT("/:id", handler.UpdateRecipeHandler)
+		auth.POST("/signup", authHandler.CreateUserHandler)
+		auth.POST("/signin", authHandler.SignInHandler)
+	}
+
+	api.GET("/recipes", handler.ListRecipeHandler)
+	api.GET("/recipes/search", handler.ListRecipesByTagHandler)
+
+	// ---- Protected Endpoint --------
+
+	secured := api.Group("/")
+	secured.Use(jwtMiddleware.Handle())
+
+	users := secured.Group("/users")
+	{
+		users.GET("/name/:name", userHandler.FindUserByNameHandler)
+		users.GET("/:id", userHandler.FindUserByIDHandler)
+		users.DELETE("/:id", userHandler.DeleteUserHandler)
+		users.PUT("/:id", userHandler.UpdateUserHandler)
+	}
+
+	recipes := secured.Group("/recipes")
+	{
+		recipes.GET("/:id", handler.GetRecipeByIDHandler)
+		recipes.POST("/", handler.CreateRecipeHandler)
+		recipes.DELETE("/:id", handler.DeleteRecipeHandler)
+		recipes.PUT("/:id", handler.UpdateRecipeHandler)
 	}
 
 	srv := &http.Server{
@@ -147,13 +192,6 @@ func main() {
 
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Printf("Server forced to shutdown: %v", err)
-	}
-
-	if mongoRepo != nil {
-		log.Println("Closing MongoDB connection...")
-		if err := mongoRepo.Close(ctx); err != nil {
-			log.Printf("Mongo close error: %v", err)
-		}
 	}
 
 	log.Println("Server exiting")
