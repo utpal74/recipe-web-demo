@@ -417,6 +417,12 @@ ok      github.com/gin-demo/recipes-web/internal/cache/redisrecipe   5.576s
 
 ---
 
+## Local pre-push test hook
+
+This repository includes a Git pre-push hook that runs `go test ./...` locally before allowing a push. This is intended to catch regressions early. If you prefer not to run tests before pushing, remove or modify `.git/hooks/pre-push`.
+
+Note: GitHub Actions CI was removed per repository policy; ensure tests pass locally before pushing.
+
 # Development Guide
 
 ## Architecture Layers
