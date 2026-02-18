@@ -110,9 +110,8 @@ func TestRefreshHandler_Success(t *testing.T) {
 	router := gin.New()
 	router.POST("/refresh", ah.RefreshHandler)
 
-	body := `{"refreshToken":"dummy-refresh-token"}`
-	req, _ := http.NewRequest("POST", "/refresh", bytes.NewBufferString(body))
-	req.Header.Set("Content-Type", "application/json")
+	req, _ := http.NewRequest("POST", "/refresh", nil)
+	req.AddCookie(&http.Cookie{Name: "refresh_token", Value: "dummy-refresh-token"})
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -120,12 +119,12 @@ func TestRefreshHandler_Success(t *testing.T) {
 		t.Fatalf("expected status 200, got %d, body: %s", w.Code, w.Body.String())
 	}
 
-	var out map[string]string
+	var out map[string]interface{}
 	if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
 		t.Fatalf("failed to unmarshal response: %v", err)
 	}
-	if out["accessToken"] == "" || out["refreshToken"] == "" {
-		t.Fatalf("expected accessToken and refreshToken in response")
+	if out["accessToken"] == nil || out["accessToken"] == "" {
+		t.Fatalf("expected accessToken in response")
 	}
 }
 
@@ -158,7 +157,7 @@ func (m *mockAuthService) SignIn(ctx context.Context, input usecase.SignInInput)
 	}, nil
 }
 
-func (m *mockAuthService) SignOut(ctx context.Context, input domain.Identity) error {
+func (m *mockAuthService) SignOut(ctx context.Context, input domain.Identity, refreshToken string) error {
 	return nil
 }
 

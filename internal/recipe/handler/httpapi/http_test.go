@@ -152,9 +152,27 @@ func TestCreateRecipeHandler_BadRequest(t *testing.T) {
 // Mock for recipeService
 
 type mockRecipeService struct{}
+func (m *mockRecipeService) Update(ctx context.Context, input domain.UpdateRecipeInput) (domain.Recipe, error) {
+	return domain.Recipe{}, nil
+}
+func (m *mockRecipeService) GetByTag(ctx context.Context, tag string) ([]domain.Recipe, error) {
+	return []domain.Recipe{}, nil
+}
+func (m *mockRecipeService) GetByID(ctx context.Context, id domain.RecipeID) (domain.Recipe, error) {
+	return domain.Recipe{}, nil
+}
+func (m *mockRecipeService) GetAll(ctx context.Context) ([]domain.Recipe, error) {
+	return []domain.Recipe{}, nil
+}
+func (m *mockRecipeService) Delete(ctx context.Context, id domain.RecipeID) error {
+	return nil
+}
+func (m *mockRecipeService) CreateMany(ctx context.Context, recipes []domain.Recipe) error {
+	return nil
+}
 
-func (m *mockRecipeService) Create(ctx context.Context, input interface{}) (interface{}, error) {
-	return nil, nil
+func (m *mockRecipeService) Create(ctx context.Context, input domain.CreateRecipeInput) (domain.Recipe, error) {
+	return domain.Recipe{}, nil
 }
 
 func TestListRecipeHandler(t *testing.T) {
