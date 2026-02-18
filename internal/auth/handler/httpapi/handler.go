@@ -69,3 +69,29 @@ func (h *AuthHandler) CreateUserHandler(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusCreated, toUserResponse(user.UserName))
 }
+
+func (h *AuthHandler) SignOutHandler(ctx *gin.Context) {
+
+}
+
+
+func (h *AuthHandler) RefreshHandler(ctx *gin.Context) {
+	var req struct {
+		RefreshToken string `json:"refreshToken"`
+	}
+	if err := ctx.ShouldBindJSON(&req); err != nil || req.RefreshToken == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "refreshToken is required"})
+		return
+	}
+
+	accessToken, refreshToken, err := h.authService.Refresh(ctx.Request.Context(), req.RefreshToken)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"accessToken": accessToken,
+		"refreshToken": refreshToken,
+	})
+}

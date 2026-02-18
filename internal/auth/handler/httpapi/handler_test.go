@@ -103,7 +103,37 @@ func TestAuthMiddleware_ValidAndInvalidToken(t *testing.T) {
 	}
 }
 
+func TestRefreshHandler_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := &mockAuthService{}
+	ah := New(mockService)
+	router := gin.New()
+	router.POST("/refresh", ah.RefreshHandler)
+
+	body := `{"refreshToken":"dummy-refresh-token"}`
+	req, _ := http.NewRequest("POST", "/refresh", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d, body: %s", w.Code, w.Body.String())
+	}
+
+	var out map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+	if out["accessToken"] == "" || out["refreshToken"] == "" {
+		t.Fatalf("expected accessToken and refreshToken in response")
+	}
+}
+
 type mockAuthService struct{}
+func (m *mockAuthService) Refresh(ctx context.Context, tokenString string) (string, string, error) {
+	// Dummy implementation for testing
+	return "new-access-token", "new-refresh-token", nil
+}
 
 func (m *mockAuthService) SignIn(ctx context.Context, input usecase.SignInInput) (usecase.SignInOutput, error) {
 	// Verify credentials - reject wrong password
