@@ -8,12 +8,14 @@ import (
 	"github.com/gin-demo/recipes-web/internal/shared/id"
 )
 
+// recipeService implements RecipeService for recipe operations.
 type recipeService struct {
 	idGenerator id.Generator
 	repo        domain.RecipeRepository
 }
 
 func NewRecipeService(repo domain.RecipeRepository, idGenerator id.Generator) domain.RecipeService {
+	// NewRecipeService creates a new recipeService instance.
 	return recipeService{
 		idGenerator: idGenerator,
 		repo:        repo,

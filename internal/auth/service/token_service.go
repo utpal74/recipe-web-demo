@@ -33,7 +33,7 @@ func NewJwtTokenService(config Config) TokenService {
 
 func (ts *jwtTokenService) CreateAccessToken(identity domain.Identity, expiry time.Time) (string, error) {
 	claims := jwtClaims{
-		UserName:  identity.UserName,
+		UserID:    identity.UserID,
 		Role:      identity.Role,
 		TokenType: "access",
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -61,15 +61,15 @@ func (ts *jwtTokenService) ValidateAccessToken(tokenString string) (domain.Ident
 	}
 
 	return domain.Identity{
-		UserName: claims.UserName,
-		Role:     claims.Role,
+		UserID: claims.UserID,
+		Role:   claims.Role,
 	}, nil
 }
 
 // CreateRefreshToken implements [TokenService].
 func (ts *jwtTokenService) CreateRefreshToken(identity domain.Identity, expiry time.Time) (string, error) {
 	claims := jwtClaims{
-		UserName:  identity.UserName,
+		UserID:    identity.UserID,
 		Role:      identity.Role,
 		TokenType: "refresh",
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -102,7 +102,7 @@ func (ts *jwtTokenService) ValidateRefreshToken(tokenString string) (domain.Iden
 	}
 
 	return domain.Identity{
-		UserName: claims.UserName,
-		Role:     claims.Role,
+		UserID: claims.UserID,
+		Role:   claims.Role,
 	}, nil
 }

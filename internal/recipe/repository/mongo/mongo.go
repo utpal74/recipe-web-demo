@@ -11,12 +11,14 @@ import (
 )
 
 // Repository implements the recipe repository interface using MongoDB.
+// Repository provides MongoDB-backed recipe persistence.
 type Repository struct {
 	recipeColl *mongo.Collection
 }
 
 // New creates a new Repository instance connected to the specified MongoDB URI and database.
 func New(collection *mongo.Collection) *Repository {
+	// New creates a new Repository for recipe persistence using MongoDB.
 	return &Repository{recipeColl: collection}
 }
 

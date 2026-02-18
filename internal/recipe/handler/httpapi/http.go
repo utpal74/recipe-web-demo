@@ -10,11 +10,13 @@ import (
 )
 
 // Handler handles HTTP requests for recipe operations.
+// Handler handles HTTP requests for recipe operations.
 type Handler struct {
 	recipeService domain.RecipeService
 }
 
 func New(service domain.RecipeService) *Handler {
+	// New creates a new Handler for recipe operations.
 	return &Handler{recipeService: service}
 }
 

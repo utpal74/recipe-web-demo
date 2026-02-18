@@ -13,4 +13,5 @@ var (
 	ErrInvalidToken       = errors.New("invalid token")
 	ErrHashingToken       = errors.New("token hashing failure")
 	ErrExpiredToken       = errors.New("expired token")
+	ErrUnAuthorized       = errors.New("user not authorized")
 )

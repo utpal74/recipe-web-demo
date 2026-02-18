@@ -4,6 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
+	"time"
 
 	"github.com/gin-demo/recipes-web/internal/auth/domain"
 	"github.com/gin-gonic/gin"
@@ -42,6 +45,20 @@ func (ah *AuthHandler) SignInHandler(ctx *gin.Context) {
 		return
 	}
 
+	ctx.SetSameSite(http.SameSiteStrictMode)
+
+	secure := strings.EqualFold("production", os.Getenv("ENV"))
+
+	ctx.SetCookie(
+		"refresh_token",
+		response.RefreshToken,
+		int(7*24*time.Hour.Seconds()),
+		"/auth/refresh",
+		"",
+		secure,
+		true,
+	)
+
 	ctx.JSON(http.StatusOK, UsecaseToResponse(response))
 }
 
@@ -71,27 +88,65 @@ func (h *AuthHandler) CreateUserHandler(ctx *gin.Context) {
 }
 
 func (h *AuthHandler) SignOutHandler(ctx *gin.Context) {
+	identity := ctx.MustGet("identity").(domain.Identity)
 
-}
-
-
-func (h *AuthHandler) RefreshHandler(ctx *gin.Context) {
-	var req struct {
-		RefreshToken string `json:"refreshToken"`
-	}
-	if err := ctx.ShouldBindJSON(&req); err != nil || req.RefreshToken == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "refreshToken is required"})
+	refreshToken, err := ctx.Cookie("refresh_token")
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "missing refresh token"})
 		return
 	}
 
-	accessToken, refreshToken, err := h.authService.Refresh(ctx.Request.Context(), req.RefreshToken)
+	err = h.authService.SignOut(ctx.Request.Context(), identity, refreshToken)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error": "failed to sign out",
+		})
+		return
+	}
+
+	ctx.SetCookie(
+		"refresh_token",
+		"",
+		-1,
+		"/auth/refresh",
+		"",
+		false,
+		true,
+	)
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "signed out"})
+}
+
+func (h *AuthHandler) RefreshHandler(ctx *gin.Context) {
+	refreshToken, err := ctx.Cookie("refresh_token")
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "refresh token required",
+		})
+		return
+	}
+
+	accessToken, refreshToken, err := h.authService.Refresh(ctx.Request.Context(), refreshToken)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
+	ctx.SetSameSite(http.SameSiteStrictMode)
+
+	secure := strings.EqualFold("production", os.Getenv("ENV"))
+
+	ctx.SetCookie(
+		"refresh_token",
+		refreshToken,
+		int(7*24*time.Hour.Seconds()),
+		"/auth/refresh",
+		"",
+		secure,
+		true,
+	)
+
 	ctx.JSON(http.StatusOK, gin.H{
 		"accessToken": accessToken,
-		"refreshToken": refreshToken,
 	})
 }

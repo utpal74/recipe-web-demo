@@ -99,7 +99,7 @@ func main() {
 		recipeRepo = recipeMongoRepo
 		userRepo = userMongoRepo
 		refreshTokenRepo = authMongoRepo
-		
+
 		if cfg.SeedData {
 			if err := bootstrap.SeedRecipe(ctx, recipeRepo, mongoResource.Database.Collection("recipes"), cfg.DataPath); err != nil {
 				log.Fatal(err)
@@ -158,13 +158,22 @@ func main() {
 
 	api := router.Group("/")
 
-	// ----- Public Endpoint -------
+	// ----- Public Auth Endpoint -------
 	auth := api.Group("/auth")
 	{
 		auth.POST("/signup", authHandler.CreateUserHandler)
 		auth.POST("/signin", authHandler.SignInHandler)
+		auth.POST("/refresh", authHandler.RefreshHandler)
+	}
+	
+	// ---- Protected Auth Endpoint --------
+	authSecured := api.Group("/auth")
+	authSecured.Use(jwtMiddleware.Handle())
+	{
+		authSecured.POST("/signout", authHandler.SignOutHandler)
 	}
 
+	// ----- Public Recipe Endpoint -------
 	api.GET("/recipes", handler.ListRecipeHandler)
 	api.GET("/recipes/search", handler.ListRecipesByTagHandler)
 

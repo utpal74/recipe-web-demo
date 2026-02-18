@@ -49,7 +49,7 @@ func (a *authService) SignIn(ctx context.Context, request usecase.SignInInput) (
 	}
 
 	identity := domain.Identity{
-		UserName: user.UserName,
+		UserID: string(user.ID),
 		// Role:     user.Role,
 	}
 
@@ -63,14 +63,26 @@ func (a *authService) SignIn(ctx context.Context, request usecase.SignInInput) (
 	}
 
 	return usecase.SignInOutput{
-		Token:   token,
-		Expires: expiry,
+		AccessToken: token,
+		Expires:     expiry,
 	}, nil
 }
 
 // SignOut implements domain.AuthService.
-func (a *authService) SignOut(ctx context.Context, input authdomain.Identity) error {
-	panic("unimplemented")
+func (a *authService) SignOut(ctx context.Context, identity domain.Identity, refreshToken string) error {
+
+	hashed := hashToken(refreshToken)
+
+	token, err := a.refreshTokenRepo.FindByTokenHash(ctx, hashed)
+	if err != nil {
+		return domain.ErrNotFound
+	}
+
+	if token.UserID != authdomain.UserID(identity.UserID) {
+		return domain.ErrUnAuthorized
+	}
+
+	return a.refreshTokenRepo.DeleteByID(ctx, token.ID)
 }
 
 // Refresh implements [domain.AuthService].

@@ -8,11 +8,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Handler handles HTTP requests for user operations.
 type Handler struct {
 	userService domain.UserService
 }
 
 func New(service domain.UserService) *Handler {
+	// New creates a new Handler for user operations.
 	return &Handler{userService: service}
 }
 

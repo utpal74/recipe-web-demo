@@ -8,12 +8,14 @@ import (
 )
 
 // CachedRepository wraps a repository and adds caching functionality.
+// CachedRepository provides recipe persistence with caching.
 type CachedRepository struct {
 	repo  domain.RecipeRepository
 	cache *redisrecipe.Cache
 }
 
 func NewCachedRepository(repo domain.RecipeRepository, cache *redisrecipe.Cache) *CachedRepository {
+	// NewCachedRepository creates a new CachedRepository with a cache.
 	return &CachedRepository{repo, cache}
 }
 

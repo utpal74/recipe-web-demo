@@ -12,11 +12,13 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
+// Repository provides MongoDB-backed user persistence.
 type Repository struct {
 	userColl *mongo.Collection
 }
 
 func New(collection *mongo.Collection) *Repository {
+	// New creates a new Repository for user persistence using MongoDB.
 	return &Repository{
 		userColl: collection,
 	}

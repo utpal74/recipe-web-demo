@@ -130,6 +130,7 @@ func TestRefreshHandler_Success(t *testing.T) {
 }
 
 type mockAuthService struct{}
+
 func (m *mockAuthService) Refresh(ctx context.Context, tokenString string) (string, string, error) {
 	// Dummy implementation for testing
 	return "new-access-token", "new-refresh-token", nil
@@ -152,8 +153,8 @@ func (m *mockAuthService) SignIn(ctx context.Context, input usecase.SignInInput)
 		return usecase.SignInOutput{}, err
 	}
 	return usecase.SignInOutput{
-		Token:   signed,
-		Expires: time.Now().Add(15 * time.Minute),
+		AccessToken: signed,
+		Expires:     time.Now().Add(15 * time.Minute),
 	}, nil
 }
 

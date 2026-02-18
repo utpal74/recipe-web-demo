@@ -132,6 +132,31 @@ func TestCreateRecipeHandler(t *testing.T) {
 	}
 }
 
+func TestCreateRecipeHandler_BadRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := &mockRecipeService{}
+	h := New(mockService)
+	router := gin.New()
+	router.POST("/create", h.CreateRecipeHandler)
+
+	req, _ := http.NewRequest("POST", "/create", bytes.NewBufferString("invalid-json"))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 for invalid json, got %d", w.Code)
+	}
+}
+
+// Mock for recipeService
+
+type mockRecipeService struct{}
+
+func (m *mockRecipeService) Create(ctx context.Context, input interface{}) (interface{}, error) {
+	return nil, nil
+}
+
 func TestListRecipeHandler(t *testing.T) {
 	service := &mockService{
 		getAllFunc: func(ctx context.Context) ([]domain.Recipe, error) {

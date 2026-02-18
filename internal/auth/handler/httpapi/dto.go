@@ -23,10 +23,6 @@ type userResponse struct {
 	Role     string `json:"role"`
 }
 
-type signOutRequest struct {
-	UserName string `json:"userName"`
-}
-
 type signOutResponse struct {
 	Message string `json:"message"`
 }

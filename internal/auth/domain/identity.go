@@ -1,6 +1,6 @@
 package domain
 
 type Identity struct {
-	UserName string
-	Role     string
+	UserID string
+	Role   string
 }

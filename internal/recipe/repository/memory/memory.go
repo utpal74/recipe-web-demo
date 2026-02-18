@@ -22,6 +22,7 @@ var (
 )
 
 // Repository implements the recipe repository interface using in-memory storage with file persistence.
+// Repository provides in-memory recipe persistence.
 type Repository struct {
 	mu       sync.RWMutex
 	data     []domain.Recipe
@@ -30,6 +31,7 @@ type Repository struct {
 
 // New creates a new Repository instance with data loaded from the specified file path.
 func New(path string) (*Repository, error) {
+	// New creates a new Repository for recipe persistence using a file path.
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrIOFailure, err)

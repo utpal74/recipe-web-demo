@@ -8,8 +8,9 @@ type SignInInput struct {
 }
 
 type SignInOutput struct {
-	Token   string
-	Expires time.Time
+	AccessToken  string
+	RefreshToken string
+	Expires      time.Time
 }
 
 type SignUpInput struct {
@@ -22,4 +23,8 @@ type SignUpInput struct {
 
 type SignUpOutput struct {
 	UserName string
+}
+
+type SignOutInput struct {
+	AccessToken string
 }

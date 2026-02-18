@@ -11,6 +11,7 @@ import (
 )
 
 func NewClient(uri string) (*mongo.Client, error) {
+	// NewClient creates a new MongoDB client using the provided URI.
 	if uri == "" {
 		return nil, errors.New("MONGO_URI can't be empty")
 	}

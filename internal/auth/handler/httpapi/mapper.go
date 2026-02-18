@@ -13,7 +13,7 @@ func RequestToUsecase(input signInUserRequest) usecase.SignInInput {
 
 func UsecaseToResponse(input usecase.SignInOutput) signInUserResponse {
 	return signInUserResponse{
-		Token:   input.Token,
+		Token:   input.AccessToken,
 		Expires: input.Expires,
 	}
 }

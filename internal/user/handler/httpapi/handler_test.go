@@ -61,6 +61,23 @@ func TestUpdateUserHandler_InvalidJSON(t *testing.T) {
 	}
 }
 
+func TestUpdateUserHandler_BadRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := &mockUserService{}
+	h := New(mockService)
+	router := gin.New()
+	router.POST("/update", h.UpdateUserHandler)
+
+	req, _ := http.NewRequest("POST", "/update", bytes.NewBufferString("invalid-json"))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 for invalid json, got %d", w.Code)
+	}
+}
+
 func TestUpdateUserHandler_Persistence_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

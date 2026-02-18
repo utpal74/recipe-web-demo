@@ -8,11 +8,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// JWTMiddleware handles JWT authentication for HTTP requests.
 type JWTMiddleware struct {
 	tokenService service.TokenService
 }
 
 func NewAuthMiddleWare(tokenService service.TokenService) *JWTMiddleware {
+	// NewAuthMiddleWare creates a new JWTMiddleware for authentication.
 	return &JWTMiddleware{
 		tokenService: tokenService,
 	}
