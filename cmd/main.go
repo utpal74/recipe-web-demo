@@ -11,7 +11,9 @@ import (
 	"syscall"
 	"time"
 
+	authdomain "github.com/gin-demo/recipes-web/internal/auth/domain"
 	authhandler "github.com/gin-demo/recipes-web/internal/auth/handler/httpapi"
+	authmongo "github.com/gin-demo/recipes-web/internal/auth/repository/mongo"
 	"github.com/gin-demo/recipes-web/internal/auth/service"
 	recipedomain "github.com/gin-demo/recipes-web/internal/recipe/domain"
 	"github.com/gin-demo/recipes-web/internal/recipe/handler/httpapi"
@@ -52,9 +54,10 @@ func main() {
 	*/
 
 	var (
-		recipeRepo recipedomain.RecipeRepository
-		userRepo   userdomain.UserRepository
-		err        error
+		recipeRepo       recipedomain.RecipeRepository
+		userRepo         userdomain.UserRepository
+		refreshTokenRepo authdomain.RefreshTokenRepository
+		err              error
 	)
 
 	idGenerator := &id.ULIDGenerator{}
@@ -78,14 +81,25 @@ func main() {
 
 		defer mongoResource.Client.Disconnect(ctx)
 
-		recipeRepo = recipemongo.New(mongoResource.Database.Collection("recipes"))
-		r := usermongo.New(mongoResource.Database.Collection("users"))
-		if err := r.EnsureIndexes(ctx); err != nil {
+		recipeMongoRepo := recipemongo.New(mongoResource.Database.Collection("recipes"))
+		if err := recipeMongoRepo.EnsureIndexes(ctx); err != nil {
 			log.Fatalf("error applying index: %v", err)
 		}
 
-		userRepo = r
+		userMongoRepo := usermongo.New(mongoResource.Database.Collection("users"))
+		if err := userMongoRepo.EnsureIndexes(ctx); err != nil {
+			log.Fatalf("error applying index: %v", err)
+		}
 
+		authMongoRepo := authmongo.New(mongoResource.Database.Collection("auth"))
+		if err := authMongoRepo.EnsureIndexes(ctx); err != nil {
+			log.Fatalf("error applying index: %v", err)
+		}
+
+		recipeRepo = recipeMongoRepo
+		userRepo = userMongoRepo
+		refreshTokenRepo = authMongoRepo
+		
 		if cfg.SeedData {
 			if err := bootstrap.SeedRecipe(ctx, recipeRepo, mongoResource.Database.Collection("recipes"), cfg.DataPath); err != nil {
 				log.Fatal(err)
@@ -131,7 +145,13 @@ func main() {
 
 	userService := userservice.NewUserService(userRepo, pwdHasher, idGenerator)
 
-	authService := service.NewAuthService(userService, tokenService, pwdHasher)
+	authService := service.NewAuthService(
+		userService,
+		tokenService,
+		pwdHasher,
+		refreshTokenRepo,
+		idGenerator,
+	)
 	authHandler := authhandler.New(authService)
 
 	userHandler := userhandler.New(userService)

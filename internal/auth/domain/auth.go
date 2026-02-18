@@ -11,4 +11,5 @@ type AuthService interface {
 	SignIn(ctx context.Context, input usecase.SignInInput) (usecase.SignInOutput, error)
 	SignOut(ctx context.Context, input Identity) error
 	SignUp(ctx context.Context, input usecase.SignUpInput) (usecase.SignUpOutput, error)
+	Refresh(ctx context.Context, tokenString string) (string, string, error)
 }

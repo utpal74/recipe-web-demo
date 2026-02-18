@@ -30,7 +30,7 @@ func (au *JWTMiddleware) Handle() gin.HandlerFunc {
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
-		identity, err := au.tokenService.ValidateToken(tokenString)
+		identity, err := au.tokenService.ValidateAccessToken(tokenString)
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error": err.Error(),
