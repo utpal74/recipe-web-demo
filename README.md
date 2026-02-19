@@ -7,9 +7,6 @@ A REST API for managing recipes with CRUD operations, featuring Redis caching an
 - Create, read, update, and delete recipes
 - Search recipes by tags
 - **Redis caching layer** with 30-minute TTL for improved performance
-- Support for multiple repository backends (in-memory, MongoDB)
-- Clean architecture with controller, handler, and repository layers
-- Comprehensive test coverage (81-91%)
 
 #### Caching Architecture
 
@@ -64,12 +61,11 @@ The application implements a **CachedRepository pattern** that wraps any reposit
 - Reduced load on the underlying repository
 - No database queries for repeated requests
 
-### Repository Backends
+### Repository Backend
 
-| Backend     | Use Case             | Status       |
-| ----------- | -------------------- | ------------ |
-| **Memory**  | Development, testing | ✅ Default   |
-| **MongoDB** | Production data      | ✅ Supported |
+| Backend     | Use Case        | Status       |
+| ----------- | --------------- | ------------ |
+| **MongoDB** | Production data | ✅ Supported |
 
 ### Test Coverage
 
@@ -396,7 +392,6 @@ make test-repo             # Repository tests only
 
 ### Other Test Layers
 
-- **Memory Repository**: 8 tests covering CRUD, persistence, concurrency
 - **Controller**: 6 tests covering business logic and error handling
 - **Handler**: 7 tests covering HTTP routing, JSON binding, error responses
 - **Model**: 2 tests covering serialization and type conversion
@@ -437,7 +432,7 @@ Note: GitHub Actions CI was removed per repository policy; ensure tests pass loc
 ├─────────────────────────────────────┤
 │   Cached Repository                 │ ← Optional caching layer
 ├─────────────────────────────────────┤
-│   Repository (memory/mongo)         │ ← Data access layer
+│   Repository (mongo)                │ ← Data access layer
 ├─────────────────────────────────────┤
 │   Models                            │ ← Data structures
 └─────────────────────────────────────┘
@@ -472,9 +467,10 @@ recipes-web/
 │   └── repository/
 │       ├── cached_recipe_repository.go  # Cached wrapper (decorates repositories)
 │       ├── cached_recipe_repository_test.go # Cached repo tests (90.9% coverage)
-│       ├── memory/
-│       │   ├── memory.go                # In-memory implementation
-│       │   └── memory_test.go           # Memory tests
+│       └── mongorepo/
+│           ├── mongo.go                 # MongoDB implementation
+│           ├── mongo_test.go            # Mongo tests
+│           └── seed.go                  # Mongo seeding
 │       └── mongorepo/
 │           ├── mongo.go                 # MongoDB implementation
 │           ├── mongo_test.go            # Mongo tests

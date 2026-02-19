@@ -1,5 +1,4 @@
-# Prompt for REPO_TYPE
-$repoType = Read-Host "Enter REPO_TYPE (e.g., mongo, memory)"
+$repoType = Read-Host "Enter REPO_TYPE (e.g., mongo)"
 $env:REPO_TYPE = $repoType
 
 # Prompt for SEED_DATA

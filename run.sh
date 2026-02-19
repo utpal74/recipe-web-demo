@@ -29,20 +29,20 @@ if [ ! -t 0 ]; then
 else
     # Interactive mode
     echo -e "${YELLOW}Available repository types:${NC}"
-    echo "  - memory (default: file-based in-memory storage)"
+    # ...existing code...
     echo "  - mongo (MongoDB storage with seeding)"
-    read -p "Enter REPO_TYPE (default: memory): " REPO_TYPE
+    read -p "Enter REPO_TYPE (default: mongo): " REPO_TYPE
     read -p "Enter SEED_DATA (true/false, default: false): " SEED_DATA
 fi
 
-REPO_TYPE=${REPO_TYPE:-memory}
+REPO_TYPE=${REPO_TYPE:-mongo}
 SEED_DATA=${SEED_DATA:-false}
 export REPO_TYPE
 export SEED_DATA
 
 # Validate REPO_TYPE
-if [ "$REPO_TYPE" != "memory" ] && [ "$REPO_TYPE" != "mongo" ]; then
-    echo -e "${RED}Error: Invalid REPO_TYPE. Must be 'memory' or 'mongo'${NC}"
+if [ "$REPO_TYPE" != "mongo" ]; then
+    echo -e "${RED}Error: Invalid REPO_TYPE. Must be 'mongo'${NC}"
     echo -e "${RED}Got: '$REPO_TYPE'${NC}"
     exit 1
 fi

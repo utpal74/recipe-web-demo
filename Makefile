@@ -1,11 +1,10 @@
 .PHONY: help run run-memory run-mongo test test-cache test-repo build clean
 
-# Default target
+
 help:
 	@echo "Recipes Web API - Make targets:"
 	@echo ""
 	@echo "  make run                 - Run the server (interactive mode)"
-	@echo "  make run-memory          - Run with in-memory repository"
 	@echo "  make run-mongo           - Run with MongoDB repository"
 	@echo "  make test                - Run all tests"
 	@echo "  make test-cache          - Run Redis cache tests"
@@ -14,23 +13,18 @@ help:
 	@echo "  make clean               - Clean build artifacts"
 	@echo ""
 	@echo "Environment variables:"
-	@echo "  REPO_TYPE=memory|mongo   - Repository type (default: memory)"
+	@echo "  REPO_TYPE=mongo   - Repository type (default: mongo)"
 	@echo "  SEED_DATA=true|false     - Seed database with initial data (default: false)"
 	@echo "  HTTP_ADDR=:8080          - HTTP server address (default: :8080)"
 
-# Run with interactive mode
+
 run:
 	@echo "Starting Recipes Web API..."
-	@read -p "Enter REPO_TYPE (memory/mongo) [memory]: " REPO_TYPE; \
-	REPO_TYPE=$${REPO_TYPE:-memory}; \
+	@read -p "Enter REPO_TYPE (mongo) [mongo]: " REPO_TYPE; \
+	REPO_TYPE=$${REPO_TYPE:-mongo}; \
 	read -p "Enter SEED_DATA (true/false) [false]: " SEED_DATA; \
 	SEED_DATA=$${SEED_DATA:-false}; \
 	REPO_TYPE=$$REPO_TYPE SEED_DATA=$$SEED_DATA go run ./cmd/main.go
-
-# Run with memory repository
-run-memory:
-	@echo "Starting with memory repository..."
-	REPO_TYPE=memory SEED_DATA=false go run ./cmd/main.go
 
 # Run with MongoDB
 run-mongo:

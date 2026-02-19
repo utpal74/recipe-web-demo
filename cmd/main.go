@@ -18,7 +18,6 @@ import (
 	recipedomain "github.com/gin-demo/recipes-web/internal/recipe/domain"
 	"github.com/gin-demo/recipes-web/internal/recipe/handler/httpapi"
 	"github.com/gin-demo/recipes-web/internal/recipe/repository"
-	"github.com/gin-demo/recipes-web/internal/recipe/repository/memory"
 	recipemongo "github.com/gin-demo/recipes-web/internal/recipe/repository/mongo"
 	recipeservice "github.com/gin-demo/recipes-web/internal/recipe/service"
 	"github.com/gin-demo/recipes-web/internal/shared/bootstrap"
@@ -65,57 +64,46 @@ func main() {
 		log.Println("no .env file found here, using system environment variable")
 	}
 
+
 	cfg := loadConfig()
 
-	switch cfg.RepoType {
-	case "memory":
-		recipeRepo, err = memory.New(cfg.DataPath)
-	case "mongo":
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
 
-		mongoResource, err := bootstrap.InitMongo(cfg.MongoURI, "recipe-app")
-		if err != nil {
-			log.Fatalf("failed to initialize mongo repository: %v", err)
-		}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-		defer mongoResource.Client.Disconnect(ctx)
-
-		recipeMongoRepo := recipemongo.New(mongoResource.Database.Collection("recipes"))
-
-		userMongoRepo := usermongo.New(mongoResource.Database.Collection("users"))
-		if err := userMongoRepo.EnsureIndexes(ctx); err != nil {
-			log.Fatalf("error applying index: %v", err)
-		}
-
-		authMongoRepo := authmongo.New(mongoResource.Database.Collection("auth"))
-		if err := authMongoRepo.EnsureIndexes(ctx); err != nil {
-			log.Fatalf("error applying index: %v", err)
-		}
-
-		recipeRepo = recipeMongoRepo
-		userRepo = userMongoRepo
-		refreshTokenRepo = authMongoRepo
-
-		if cfg.SeedData {
-			if err := bootstrap.SeedRecipe(ctx, recipeRepo, mongoResource.Database.Collection("recipes"), cfg.DataPath); err != nil {
-				log.Fatal(err)
-			}
-		}
-
-	default:
-		log.Fatalf("unknown REPO_TYPE: %s", cfg.RepoType)
-	}
-
+	mongoResource, err := bootstrap.InitMongo(cfg.MongoURI, "recipe-app")
 	if err != nil {
-		log.Fatalf("failed to initialize repository: %v", err)
+		log.Fatalf("failed to initialize mongo repository: %v", err)
 	}
+	defer mongoResource.Client.Disconnect(ctx)
+
+	recipeMongoRepo := recipemongo.New(mongoResource.Database.Collection("recipes"))
+
+	userMongoRepo := usermongo.New(mongoResource.Database.Collection("users"))
+	if err := userMongoRepo.EnsureIndexes(ctx); err != nil {
+		log.Fatalf("error applying index: %v", err)
+	}
+
+	authMongoRepo := authmongo.New(mongoResource.Database.Collection("auth"))
+	if err := authMongoRepo.EnsureIndexes(ctx); err != nil {
+		log.Fatalf("error applying index: %v", err)
+	}
+
+	recipeRepo = recipeMongoRepo
+	userRepo = userMongoRepo
+	refreshTokenRepo = authMongoRepo
+
+	if cfg.SeedData {
+		if err := bootstrap.SeedRecipe(ctx, recipeRepo, mongoResource.Database.Collection("recipes"), cfg.DataPath); err != nil {
+			log.Fatal(err)
+		}
+	}
+
 
 	redisClient, err := bootstrap.NewRedis(os.Getenv("REDIS_ADDR"), "", 0)
 	if err != nil {
 		log.Printf("redis client init error : %v\n", err)
 	}
-
 	if redisClient != nil {
 		cache := redisrecipe.NewCache(redisClient, 30*time.Minute)
 		cachedRepo := repository.NewCachedRepository(recipeRepo, cache)
@@ -220,7 +208,7 @@ func main() {
 
 	log.Println("Shutting down server...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
@@ -239,7 +227,7 @@ func loadConfig() Config {
 	}
 
 	cfg := Config{
-		RepoType: "memory",
+		RepoType: "mongo",
 		DataPath: "data/recipe.json",
 		MongoURI: os.Getenv("MONGO_URI"),
 		HttpAddr: ":" + port,
