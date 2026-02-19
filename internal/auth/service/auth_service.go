@@ -20,6 +20,7 @@ type authService struct {
 	pwdHasher        PasswordHasher
 	refreshTokenRepo domain.RefreshTokenRepository
 	idGenerator      id.Generator
+	config           AuthConfig
 }
 
 func NewAuthService(
@@ -28,12 +29,15 @@ func NewAuthService(
 	pwdHasher PasswordHasher,
 	refreshTokenRepo domain.RefreshTokenRepository,
 	idGenerator id.Generator,
+	config AuthConfig,
 ) authdomain.AuthService {
 	return &authService{
 		userService:      userService,
 		tokenService:     tokenService,
 		pwdHasher:        pwdHasher,
 		refreshTokenRepo: refreshTokenRepo,
+		idGenerator:      idGenerator,
+		config:           config,
 	}
 }
 
@@ -53,18 +57,41 @@ func (a *authService) SignIn(ctx context.Context, request usecase.SignInInput) (
 		// Role:     user.Role,
 	}
 
-	// TODO: expiry shouldn't be hardcoded but returned by CreateToken here as shown below.
-	// token, expiry, err := tokenService.CreateAccessToken(identity)
-	expiry := time.Now().Add(15 * time.Minute)
+	accessExpiry := a.config.AccessTokenTTL
+	refreshExpiry := a.config.RefreshTokenTTL
 
-	token, err := a.tokenService.CreateAccessToken(identity, expiry)
+	now := time.Now()
+
+	token, err := a.tokenService.CreateAccessToken(identity, now.Add(accessExpiry))
 	if err != nil {
 		return usecase.SignInOutput{}, fmt.Errorf("token creation: %w", err)
 	}
 
+	fmt.Println("request here ..")
+	refreshToken, err := a.tokenService.CreateRefreshToken(identity, now.Add(refreshExpiry))
+	if err != nil {
+		return usecase.SignInOutput{}, fmt.Errorf("token creation: %w", err)
+	}
+
+	newHash := hashToken(refreshToken)
+
+	t := &domain.RefreshToken{
+		ID:        authdomain.TokenID(a.idGenerator.New()),
+		UserID:    authdomain.UserID(user.ID),
+		TokenHash: newHash,
+		Revoked:   false,
+		CreatedAt: now,
+		ExpiresAt: now.Add(refreshExpiry),
+	}
+
+	if err := a.refreshTokenRepo.Save(ctx, t); err != nil {
+		return usecase.SignInOutput{}, fmt.Errorf("save refresh token: %w", err)
+	}
+
 	return usecase.SignInOutput{
-		AccessToken: token,
-		Expires:     expiry,
+		AccessToken:  token,
+		RefreshToken: refreshToken,
+		Expires:      now.Add(accessExpiry),
 	}, nil
 }
 
@@ -111,15 +138,16 @@ func (a *authService) Refresh(ctx context.Context, tokenString string) (string, 
 		return "", "", err
 	}
 
-	accessExpiry := time.Now().Add(15 * time.Minute)
-	refreshExpiry := time.Now().Add(7 * 24 * time.Hour)
+	accessExpiry := a.config.AccessTokenTTL
+	refreshExpiry := a.config.RefreshTokenTTL
 
-	accessToken, err := a.tokenService.CreateAccessToken(identity, accessExpiry)
+	now := time.Now()
+	accessToken, err := a.tokenService.CreateAccessToken(identity, now.Add(accessExpiry))
 	if err != nil {
 		return "", "", err
 	}
 
-	refreshToken, err := a.tokenService.CreateRefreshToken(identity, refreshExpiry)
+	refreshToken, err := a.tokenService.CreateRefreshToken(identity, now.Add(refreshExpiry))
 	if err != nil {
 		return "", "", err
 	}
@@ -131,8 +159,8 @@ func (a *authService) Refresh(ctx context.Context, tokenString string) (string, 
 		UserID:    storedToken.UserID,
 		TokenHash: newHash,
 		Revoked:   false,
-		CreatedAt: time.Now(),
-		ExpiresAt: refreshExpiry,
+		CreatedAt: now,
+		ExpiresAt: now.Add(refreshExpiry),
 	}
 	a.refreshTokenRepo.Save(ctx, t)
 

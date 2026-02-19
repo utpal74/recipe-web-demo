@@ -152,6 +152,7 @@ func TestCreateRecipeHandler_BadRequest(t *testing.T) {
 // Mock for recipeService
 
 type mockRecipeService struct{}
+
 func (m *mockRecipeService) Update(ctx context.Context, input domain.UpdateRecipeInput) (domain.Recipe, error) {
 	return domain.Recipe{}, nil
 }

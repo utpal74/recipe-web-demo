@@ -30,7 +30,6 @@ func (ah *AuthHandler) SignInHandler(ctx *gin.Context) {
 	}
 
 	response, err := ah.authService.SignIn(ctx.Request.Context(), RequestToUsecase(request))
-
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrInvalidCredentials) || errors.Is(err, domain.ErrNotAuthorized):

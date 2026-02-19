@@ -82,9 +82,6 @@ func main() {
 		defer mongoResource.Client.Disconnect(ctx)
 
 		recipeMongoRepo := recipemongo.New(mongoResource.Database.Collection("recipes"))
-		if err := recipeMongoRepo.EnsureIndexes(ctx); err != nil {
-			log.Fatalf("error applying index: %v", err)
-		}
 
 		userMongoRepo := usermongo.New(mongoResource.Database.Collection("users"))
 		if err := userMongoRepo.EnsureIndexes(ctx); err != nil {
@@ -145,13 +142,20 @@ func main() {
 
 	userService := userservice.NewUserService(userRepo, pwdHasher, idGenerator)
 
+	config := service.AuthConfig{
+		AccessTokenTTL:  15 * time.Minute,
+		RefreshTokenTTL: 7 * 24 * time.Hour,
+	}
+
 	authService := service.NewAuthService(
 		userService,
 		tokenService,
 		pwdHasher,
 		refreshTokenRepo,
 		idGenerator,
+		config,
 	)
+
 	authHandler := authhandler.New(authService)
 
 	userHandler := userhandler.New(userService)
@@ -165,7 +169,7 @@ func main() {
 		auth.POST("/signin", authHandler.SignInHandler)
 		auth.POST("/refresh", authHandler.RefreshHandler)
 	}
-	
+
 	// ---- Protected Auth Endpoint --------
 	authSecured := api.Group("/auth")
 	authSecured.Use(jwtMiddleware.Handle())
