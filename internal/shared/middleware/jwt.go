@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -13,8 +14,8 @@ type JWTMiddleware struct {
 	tokenService service.TokenService
 }
 
+// NewAuthMiddleWare creates a new JWTMiddleware for authentication.
 func NewAuthMiddleWare(tokenService service.TokenService) *JWTMiddleware {
-	// NewAuthMiddleWare creates a new JWTMiddleware for authentication.
 	return &JWTMiddleware{
 		tokenService: tokenService,
 	}
@@ -40,7 +41,17 @@ func (au *JWTMiddleware) Handle() gin.HandlerFunc {
 			return
 		}
 
-		ctx.Set("identity", identity)
+		newCtx := context.WithValue(ctx.Request.Context(), "authIdentity", identity)
+		ctx.Request = ctx.Request.WithContext(newCtx)
+		// ctx.Set("authIdentity", identity)
+
+		idemKey := ctx.GetHeader("Idempotency-Key")
+		if idemKey != "" {
+			// ctx.Set("idempotencyKey", idemKey)
+			newCtx := context.WithValue(ctx.Request.Context(), "idempotencyKey", idemKey)
+			ctx.Request = ctx.Request.WithContext(newCtx)
+		}
+
 		ctx.Next()
 	}
 }

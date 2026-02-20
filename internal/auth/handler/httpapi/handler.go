@@ -87,7 +87,7 @@ func (h *AuthHandler) CreateUserHandler(ctx *gin.Context) {
 }
 
 func (h *AuthHandler) SignOutHandler(ctx *gin.Context) {
-	identity := ctx.MustGet("identity").(domain.Identity)
+	identity := ctx.MustGet("authIdentity").(domain.Identity)
 
 	refreshToken, err := ctx.Cookie("refresh_token")
 	if err != nil {

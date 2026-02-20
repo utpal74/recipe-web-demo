@@ -23,6 +23,7 @@ import (
 	"github.com/gin-demo/recipes-web/internal/shared/bootstrap"
 	"github.com/gin-demo/recipes-web/internal/shared/cache/redisrecipe"
 	"github.com/gin-demo/recipes-web/internal/shared/id"
+	"github.com/gin-demo/recipes-web/internal/shared/idempotency"
 	"github.com/gin-demo/recipes-web/internal/shared/middleware"
 	userdomain "github.com/gin-demo/recipes-web/internal/user/domain"
 	userhandler "github.com/gin-demo/recipes-web/internal/user/handler/httpapi"
@@ -64,10 +65,7 @@ func main() {
 		log.Println("no .env file found here, using system environment variable")
 	}
 
-
 	cfg := loadConfig()
-
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -99,7 +97,6 @@ func main() {
 		}
 	}
 
-
 	redisClient, err := bootstrap.NewRedis(os.Getenv("REDIS_ADDR"), "", 0)
 	if err != nil {
 		log.Printf("redis client init error : %v\n", err)
@@ -112,8 +109,16 @@ func main() {
 
 	router := gin.Default()
 
+	store := idempotency.NewRedisStore(redisClient, 24*time.Hour)
+
 	recipeService := recipeservice.NewRecipeService(recipeRepo, idGenerator)
-	handler := httpapi.New(recipeService)
+	idemptentRecipeService := recipeservice.NewIdempotentRecipeService(
+		recipeService,
+		store,
+		*idGenerator,
+	)
+
+	handler := httpapi.New(idemptentRecipeService)
 
 	if os.Getenv("JWT_SECRET") == "" {
 		log.Fatal("JWT_SECRET is required but not set")

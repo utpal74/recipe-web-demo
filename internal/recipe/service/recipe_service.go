@@ -14,8 +14,8 @@ type recipeService struct {
 	repo        domain.RecipeRepository
 }
 
+// NewRecipeService creates a new recipeService instance.
 func NewRecipeService(repo domain.RecipeRepository, idGenerator id.Generator) domain.RecipeService {
-	// NewRecipeService creates a new recipeService instance.
 	return recipeService{
 		idGenerator: idGenerator,
 		repo:        repo,
