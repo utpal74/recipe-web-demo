@@ -31,6 +31,7 @@ import (
 	"github.com/gin-demo/recipes-web/internal/platform/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"golang.org/x/time/rate"
 )
 
 // Config holds the application configuration from environment variables.
@@ -155,29 +156,39 @@ func main() {
 
 	api := router.Group("/")
 
-	// ----- Public Auth Endpoint -------
+	authLimiter := middleware.NewRateLimitMiddleware(rate.Every(time.Minute), 3)
+	publicLimiter := middleware.NewRateLimitMiddleware(rate.Every(time.Second), 20)
+	userLimiter := middleware.NewRateLimitMiddleware(rate.Every(time.Second), 30)
+
+	// =======================
+	// Public route
+	// =======================
+	public := api.Group("/")
+	public.Use(publicLimiter.Handle())
+	{
+		public.GET("/recipes", handler.ListRecipeHandler)
+		public.GET("/recipes/search", handler.ListRecipesByTagHandler)
+	}
+
+	// =======================
+	// Auth route (public but strict)
+	// =======================
 	auth := api.Group("/auth")
+	auth.Use(authLimiter.Handle())
 	{
 		auth.POST("/signup", authHandler.CreateUserHandler)
 		auth.POST("/signin", authHandler.SignInHandler)
 		auth.POST("/refresh", authHandler.RefreshHandler)
 	}
 
-	// ---- Protected Auth Endpoint --------
-	authSecured := api.Group("/auth")
-	authSecured.Use(jwtMiddleware.Handle())
-	{
-		authSecured.POST("/signout", authHandler.SignOutHandler)
-	}
-
-	// ----- Public Recipe Endpoint -------
-	api.GET("/recipes", handler.ListRecipeHandler)
-	api.GET("/recipes/search", handler.ListRecipesByTagHandler)
-
-	// ---- Protected Endpoint --------
-
+	// =======================
+	// Authenticated Routes
+	// =======================
 	secured := api.Group("/")
 	secured.Use(jwtMiddleware.Handle())
+	secured.Use(userLimiter.Handle())
+
+	secured.POST("/auth/signout", authHandler.SignOutHandler)
 
 	users := secured.Group("/users")
 	{
