@@ -45,14 +45,6 @@ type Config struct {
 
 // main initializes and runs the recipe application server.
 func main() {
-	/*
-		GET /recipes - Return list of recipes
-		GET /recipes/{id} - Get recipe by ID
-		POST /recipes - Create new recipe
-		PUT /recipes/{id} - Updates an existing recipes
-		DELETE /recipes/{id} - Deletes an existing recipes
-		GET /recipes/search?tag=X = Search recipe by tag
-	*/
 
 	var (
 		recipeRepo       recipedomain.RecipeRepository
@@ -61,30 +53,31 @@ func main() {
 		err              error
 	)
 
+	appCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	idGenerator := &id.ULIDGenerator{}
 	if err := godotenv.Load(); err != nil {
 		log.Println("no .env file found here, using system environment variable")
 	}
 
 	cfg := loadConfig()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 
 	mongoResource, err := bootstrap.InitMongo(cfg.MongoURI, "recipe-app")
 	if err != nil {
 		log.Fatalf("failed to initialize mongo repository: %v", err)
 	}
-	defer mongoResource.Client.Disconnect(ctx)
+	defer mongoResource.Client.Disconnect(appCtx)
 
 	recipeMongoRepo := recipemongo.New(mongoResource.Database.Collection("recipes"))
 
 	userMongoRepo := usermongo.New(mongoResource.Database.Collection("users"))
-	if err := userMongoRepo.EnsureIndexes(ctx); err != nil {
+	if err := userMongoRepo.EnsureIndexes(appCtx); err != nil {
 		log.Fatalf("error applying index: %v", err)
 	}
 
 	authMongoRepo := authmongo.New(mongoResource.Database.Collection("auth"))
-	if err := authMongoRepo.EnsureIndexes(ctx); err != nil {
+	if err := authMongoRepo.EnsureIndexes(appCtx); err != nil {
 		log.Fatalf("error applying index: %v", err)
 	}
 
@@ -93,7 +86,7 @@ func main() {
 	refreshTokenRepo = authMongoRepo
 
 	if cfg.SeedData {
-		if err := bootstrap.SeedRecipe(ctx, recipeRepo, mongoResource.Database.Collection("recipes"), cfg.DataPath); err != nil {
+		if err := bootstrap.SeedRecipe(appCtx, recipeRepo, mongoResource.Database.Collection("recipes"), cfg.DataPath); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -156,9 +149,9 @@ func main() {
 
 	api := router.Group("/")
 
-	authLimiter := middleware.NewRateLimitMiddleware(rate.Every(time.Minute), 3)
-	publicLimiter := middleware.NewRateLimitMiddleware(rate.Every(time.Second), 20)
-	userLimiter := middleware.NewRateLimitMiddleware(rate.Every(time.Second), 30)
+	authLimiter := middleware.NewRateLimitMiddleware(appCtx, rate.Every(time.Minute), 3)
+	publicLimiter := middleware.NewRateLimitMiddleware(appCtx, rate.Every(time.Second), 20)
+	userLimiter := middleware.NewRateLimitMiddleware(appCtx, rate.Every(time.Second), 30)
 
 	// =======================
 	// Public route
@@ -218,16 +211,10 @@ func main() {
 		}
 	}()
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	<-quit
-
+	<-appCtx.Done()
 	log.Println("Shutting down server...")
 
-	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(appCtx); err != nil {
 		log.Printf("Server forced to shutdown: %v", err)
 	}
 
