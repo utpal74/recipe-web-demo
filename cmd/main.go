@@ -31,7 +31,6 @@ import (
 	"github.com/gin-demo/recipes-web/internal/platform/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"golang.org/x/time/rate"
 )
 
 // Config holds the application configuration from environment variables.
@@ -149,9 +148,17 @@ func main() {
 
 	api := router.Group("/")
 
-	authLimiter := middleware.NewRateLimitMiddleware(appCtx, rate.Every(time.Minute), 3)
-	publicLimiter := middleware.NewRateLimitMiddleware(appCtx, rate.Every(time.Second), 20)
-	userLimiter := middleware.NewRateLimitMiddleware(appCtx, rate.Every(time.Second), 30)
+	// authLimiter := middleware.NewRateLimitMiddleware(appCtx, rate.Every(time.Minute), 3)
+	// publicLimiter := middleware.NewRateLimitMiddleware(appCtx, rate.Every(time.Second), 20)
+	// userLimiter := middleware.NewRateLimitMiddleware(appCtx, rate.Every(time.Second), 30)
+
+	// authLimiter := middleware.NewFixWindowRateLimitingMiddleWare(appCtx, 3, time.Minute)
+	// publicLimiter := middleware.NewFixWindowRateLimitingMiddleWare(appCtx, 100, time.Second)
+	// userLimiter := middleware.NewFixWindowRateLimitingMiddleWare(appCtx, 1000, time.Second)
+
+	authLimiter := middleware.NewSlideWindowLogMiddleWare(appCtx, 3, time.Minute)
+	publicLimiter := middleware.NewSlideWindowLogMiddleWare(appCtx, 100, time.Second)
+	userLimiter := middleware.NewSlideWindowLogMiddleWare(appCtx, 1000, time.Second)
 
 	// =======================
 	// Public route
