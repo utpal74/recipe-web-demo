@@ -10,14 +10,19 @@ import (
 
 type fixedWindowLimiter struct {
 	client *redis.Client
-	limit int
+	limit  int
 	window time.Duration
+}
+
+// Name implements [Limiter].
+func (f *fixedWindowLimiter) Name() string {
+	return "fixed"
 }
 
 func NewFixedWindowLimiter(client *redis.Client, limit int, window time.Duration) Limiter {
 	return &fixedWindowLimiter{
 		client: client,
-		limit: limit,
+		limit:  limit,
 		window: window,
 	}
 }

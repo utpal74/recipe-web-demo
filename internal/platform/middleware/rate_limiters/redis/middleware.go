@@ -16,7 +16,7 @@ func NewRateLimiter(limiter Limiter) gin.HandlerFunc {
 			key = identity.UserID
 		}
 
-		key = fmt.Sprintf("rate_limit:fixed:%v", key)
+		key = fmt.Sprintf("rate_limit:%s:%v", limiter.Name(), key)
 
 		allowed, err := limiter.Allow(ctx.Request.Context(), key)
 		if err != nil {
