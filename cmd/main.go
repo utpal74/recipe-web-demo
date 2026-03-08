@@ -29,6 +29,7 @@ import (
 	"github.com/gin-demo/recipes-web/internal/platform/id"
 	"github.com/gin-demo/recipes-web/internal/platform/idempotency"
 	"github.com/gin-demo/recipes-web/internal/platform/middleware"
+	"github.com/gin-demo/recipes-web/internal/platform/middleware/rate_limiters/redis"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -148,23 +149,23 @@ func main() {
 
 	api := router.Group("/")
 
-	// authLimiter := middleware.NewRateLimitMiddleware(appCtx, rate.Every(time.Minute), 3)
-	// publicLimiter := middleware.NewRateLimitMiddleware(appCtx, rate.Every(time.Second), 20)
-	// userLimiter := middleware.NewRateLimitMiddleware(appCtx, rate.Every(time.Second), 30)
+	authLimiter := redis.NewRateLimiter(
+		redis.NewFixedWindowLimiter(redisClient, 3, time.Minute),
+	)
 
-	// authLimiter := middleware.NewFixWindowRateLimitingMiddleWare(appCtx, 3, time.Minute)
-	// publicLimiter := middleware.NewFixWindowRateLimitingMiddleWare(appCtx, 100, time.Second)
-	// userLimiter := middleware.NewFixWindowRateLimitingMiddleWare(appCtx, 1000, time.Second)
+	publicLimiter := redis.NewRateLimiter(
+		redis.NewFixedWindowLimiter(redisClient, 100, time.Second),
+	)
 
-	authLimiter := middleware.NewSlideWindowLogMiddleWare(appCtx, 3, time.Minute)
-	publicLimiter := middleware.NewSlideWindowLogMiddleWare(appCtx, 100, time.Second)
-	userLimiter := middleware.NewSlideWindowLogMiddleWare(appCtx, 1000, time.Second)
+	userLimiter := redis.NewRateLimiter(
+		redis.NewFixedWindowLimiter(redisClient, 1000, time.Second),
+	)
 
 	// =======================
 	// Public route
 	// =======================
 	public := api.Group("/")
-	public.Use(publicLimiter.Handle())
+	public.Use(publicLimiter)
 	{
 		public.GET("/recipes", handler.ListRecipeHandler)
 		public.GET("/recipes/search", handler.ListRecipesByTagHandler)
@@ -174,7 +175,7 @@ func main() {
 	// Auth route (public but strict)
 	// =======================
 	auth := api.Group("/auth")
-	auth.Use(authLimiter.Handle())
+	auth.Use(authLimiter)
 	{
 		auth.POST("/signup", authHandler.CreateUserHandler)
 		auth.POST("/signin", authHandler.SignInHandler)
@@ -186,7 +187,7 @@ func main() {
 	// =======================
 	secured := api.Group("/")
 	secured.Use(jwtMiddleware.Handle())
-	secured.Use(userLimiter.Handle())
+	secured.Use(userLimiter)
 
 	secured.POST("/auth/signout", authHandler.SignOutHandler)
 
