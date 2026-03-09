@@ -150,15 +150,15 @@ func main() {
 	api := router.Group("/")
 
 	authLimiter := redis.NewRateLimiter(
-		redis.NewFixedWindowLimiter(redisClient, 3, time.Minute),
+		redis.NewSlideWindowLimiter(redisClient, 3, time.Minute),
 	)
 
 	publicLimiter := redis.NewRateLimiter(
-		redis.NewFixedWindowLimiter(redisClient, 100, time.Second),
+		redis.NewSlideWindowLimiter(redisClient, 100, time.Second),
 	)
 
 	userLimiter := redis.NewRateLimiter(
-		redis.NewFixedWindowLimiter(redisClient, 1000, time.Second),
+		redis.NewSlideWindowLimiter(redisClient, 1000, time.Second),
 	)
 
 	// =======================

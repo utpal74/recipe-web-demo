@@ -30,9 +30,11 @@ func NewRateLimiter(limiter Limiter) gin.HandlerFunc {
 		ctx.Header("X-RateLimit-Limit", strconv.Itoa(limit))
 		ctx.Header("X-RateLimit-Remaining", strconv.Itoa(remaining))
 		ctx.Header("X-RateLimit-Reset", strconv.FormatInt(reset, 10))
-		ctx.Header("X-RateLimit-Retry-After", strconv.Itoa(int(reset-time.Now().Unix())))
 
 		if !allowed {
+			retryAfter := max((reset-time.Now().UnixMilli())/1000, 0)
+			ctx.Header("Retry-After", strconv.FormatInt(retryAfter, 10))
+			
 			ctx.JSON(http.StatusTooManyRequests, gin.H{"message": "too many requests"})
 			ctx.Abort()
 			return
