@@ -27,7 +27,7 @@ func NewFixedWindowLimiter(client *redis.Client, limit int, window time.Duration
 	}
 }
 
-func (f *fixedWindowLimiter) Allow(ctx context.Context, key string) (bool, error) {
+func (f *fixedWindowLimiter) Allow(ctx context.Context, key string) (bool, int, int, int64, error) {
 
 	window := time.Now().Unix() / int64(f.window.Seconds())
 
@@ -35,19 +35,23 @@ func (f *fixedWindowLimiter) Allow(ctx context.Context, key string) (bool, error
 
 	count, err := f.client.Incr(ctx, key).Result()
 	if err != nil {
-		return false, err
+		return false, 0, 0, 0, err
 	}
 
 	if count == 1 {
 		err := f.client.Expire(ctx, key, f.window).Err()
 		if err != nil {
-			return false, err
+			return false, 0, 0, 0, err
 		}
 	}
 
 	if count > int64(f.limit) {
-		return false, nil
+		return false, 0, 0, 0, err
 	}
 
-	return true, nil
+	remaining := max(f.limit-int(count), 0)
+
+	reset := (window + 1) * int64(f.window.Seconds())
+
+	return true, f.limit, remaining, reset, nil
 }
