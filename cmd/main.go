@@ -154,7 +154,7 @@ func main() {
 	)
 
 	publicLimiter := redis.NewRateLimiter(
-		redis.NewSlideWindowLimiter(redisClient, 100, time.Second),
+		redis.NewTokenBucketLimiter(redisClient, 10, 2),
 	)
 
 	userLimiter := redis.NewRateLimiter(

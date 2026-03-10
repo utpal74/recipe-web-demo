@@ -34,7 +34,7 @@ func NewRateLimiter(limiter Limiter) gin.HandlerFunc {
 		if !allowed {
 			retryAfter := max((reset-time.Now().UnixMilli())/1000, 0)
 			ctx.Header("Retry-After", strconv.FormatInt(retryAfter, 10))
-			
+
 			ctx.JSON(http.StatusTooManyRequests, gin.H{"message": "too many requests"})
 			ctx.Abort()
 			return
