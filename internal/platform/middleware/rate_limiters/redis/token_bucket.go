@@ -55,13 +55,13 @@ type tokenBucketLimiter struct {
 
 // Allow implements [Limiter].
 func (s *tokenBucketLimiter) Allow(ctx context.Context, key string) (bool, int, int, int64, error) {
-	
+
 	now := time.Now()
 
-	res, err := tokenBucketScript.Run(ctx, s.client, 
-		[]string{key}, 
-		s.capacity, 
-		s.rate, 
+	res, err := tokenBucketScript.Run(ctx, s.client,
+		[]string{key},
+		s.capacity,
+		s.rate,
 		now.UnixMilli(), 1).Result()
 	if err != nil {
 		return false, 0, 0, 0, err
@@ -71,7 +71,7 @@ func (s *tokenBucketLimiter) Allow(ctx context.Context, key string) (bool, int, 
 	allowed := val[0].(int64) == 1
 
 	var token float64
-	switch v:= val[1].(type) {
+	switch v := val[1].(type) {
 	case int64:
 		token = float64(v)
 	case float64:
@@ -79,7 +79,7 @@ func (s *tokenBucketLimiter) Allow(ctx context.Context, key string) (bool, int, 
 	default:
 		return false, 0, 0, 0, fmt.Errorf("unexpected token type %T", v)
 	}
-	
+
 	remaining := int(math.Floor(token))
 	missing := 1 - token
 	if missing < 0 {

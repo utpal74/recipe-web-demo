@@ -6,7 +6,7 @@ import (
 
 // Recipe represents a cooking recipe with ingredients and instructions.
 type recipeDocument struct {
-	ID           string    `bson:"_id"`
+	ID           any       `bson:"_id"`
 	Name         string    `bson:"name"`
 	Tags         []string  `bson:"tags"`
 	Ingredients  []string  `bson:"ingredients"`

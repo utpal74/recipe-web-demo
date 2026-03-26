@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/gin-demo/recipes-web/internal/module/recipe/domain"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -66,10 +67,22 @@ func (repo *Repository) CreateMany(ctx context.Context, recipes []domain.Recipe)
 	return nil
 }
 
+func buildIDFilter(id string) bson.M {
+	or := []bson.M{
+		{"_id": id}, // string
+	}
+
+	if objID, err := primitive.ObjectIDFromHex(id); err == nil {
+		or = append(or, bson.M{"_id": objID})
+	}
+
+	return bson.M{"$or": or}
+}
+
 // GetByID retrieves a recipe by its ID.
 func (repo *Repository) GetByID(ctx context.Context, id domain.RecipeID) (domain.Recipe, error) {
 	var doc recipeDocument
-	filter := bson.M{"_id": string(id)}
+	filter := buildIDFilter(string(id))
 
 	err := repo.recipeColl.FindOne(ctx, filter).Decode(&doc)
 	if err != nil {
@@ -86,7 +99,7 @@ func (repo *Repository) GetByID(ctx context.Context, id domain.RecipeID) (domain
 func (repo *Repository) GetAll(ctx context.Context) ([]domain.Recipe, error) {
 	cur, err := repo.recipeColl.Find(ctx, bson.M{})
 	if err != nil {
-		return []domain.Recipe{}, fmt.Errorf("%w", domain.ErrPersistence)
+		return []domain.Recipe{}, fmt.Errorf("here 1 %w", domain.ErrPersistence)
 	}
 
 	defer cur.Close(ctx)
@@ -95,13 +108,13 @@ func (repo *Repository) GetAll(ctx context.Context) ([]domain.Recipe, error) {
 	for cur.Next(ctx) {
 		var doc recipeDocument
 		if err := cur.Decode(&doc); err != nil {
-			return nil, domain.ErrPersistence
+			return nil, fmt.Errorf("here 3 %w, %w", domain.ErrPersistence, err)
 		}
 		recipes = append(recipes, toDomainRecipe(doc))
 	}
 
 	if err := cur.Err(); err != nil {
-		return nil, domain.ErrPersistence
+		return nil, fmt.Errorf("here 2 %w", domain.ErrPersistence)
 	}
 
 	return recipes, nil
